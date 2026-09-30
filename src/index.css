@@ -11,6 +11,10 @@
     font-family: 'Cairo', 'Tajawal', system-ui, sans-serif;
     overscroll-behavior-y: none;
     -webkit-overflow-scrolling: touch;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
   * {
     -webkit-tap-highlight-color: transparent;

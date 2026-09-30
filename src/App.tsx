@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { AppProvider } from '@/lib/AppContext';
 import { ThemeProvider } from '@/lib/ThemeContext';
@@ -13,6 +13,7 @@ import { AssistantScreen } from '@/screens/AssistantScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
 import { BottomNav, type Tab } from '@/components/BottomNav';
 import { LoadingScreen } from '@/components/ui';
+import { initNativePlugins, setupBackButton } from '@/lib/native';
 import type { ResearchProject } from '@/types';
 
 type Screen =
@@ -26,6 +27,36 @@ function AppContent() {
     return localStorage.getItem('rn-onboarded') === 'true';
   });
   const [screen, setScreen] = useState<Screen>({ name: 'main', tab: 'home' });
+  const screenRef = useRef(screen);
+  screenRef.current = screen;
+
+  useEffect(() => {
+    initNativePlugins();
+  }, []);
+
+  useEffect(() => {
+    const handleBack = () => {
+      const current = screenRef.current;
+      if (current.name === 'workspace') {
+        setScreen({ name: 'main', tab: 'research' });
+      } else if (current.name === 'create') {
+        setScreen({ name: 'main', tab: 'research' });
+      } else if (current.name === 'main' && current.tab !== 'home') {
+        setScreen({ name: 'main', tab: 'home' });
+      }
+    };
+
+    const canGoBack =
+      screen.name === 'workspace' ||
+      screen.name === 'create' ||
+      (screen.name === 'main' && screen.tab !== 'home');
+
+    const listenerPromise = setupBackButton(handleBack, canGoBack);
+
+    return () => {
+      listenerPromise?.then((listener) => listener?.remove());
+    };
+  }, [screen]);
 
   if (loading) {
     return <LoadingScreen />;

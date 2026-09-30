@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { Search, Loader2, Bookmark, Check, ExternalLink, Info, Filter } from 'lucide-react';
 import { EmptyState, ErrorState } from '@/components/ui';
 import { Modal } from '@/components/ui/Modal';
+import { openExternalUrl } from '@/lib/native';
 import type { SearchResult } from '@/types';
 
 const POPULAR_TOPICS = [
@@ -246,9 +247,9 @@ export function DiscoverScreen() {
               </div>
             )}
             {openResult.url && (
-              <a href={openResult.url} target="_blank" rel="noopener noreferrer" className="btn-secondary w-full text-xs">
+              <button onClick={() => openExternalUrl(openResult.url!)} className="btn-secondary w-full text-xs">
                 <ExternalLink className="w-4 h-4" /> {t('openOriginal')}
-              </a>
+              </button>
             )}
             <button
               onClick={() => { handleSave(openResult); }}

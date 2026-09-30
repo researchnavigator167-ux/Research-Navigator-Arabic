@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState, ErrorState, Spinner } from '@/components/ui';
+import { openExternalUrl } from '@/lib/native';
 import type { ResearchProject, Source, EvidenceItem, ResearchGap, BriefContent, PaperAnalysis, SearchResult } from '@/types';
 
 interface WorkspaceProps {
@@ -412,9 +413,9 @@ function SourceDetail({ result, onSave, isSaved, onAnalyze }: {
       )}
 
       {result.url && (
-        <a href={result.url} target="_blank" rel="noopener noreferrer" className="btn-secondary w-full text-xs">
+        <button onClick={() => openExternalUrl(result.url!)} className="btn-secondary w-full text-xs">
           <ExternalLink className="w-4 h-4" /> {t('openOriginal')}
-        </a>
+        </button>
       )}
 
       <div className="flex gap-2">
@@ -563,9 +564,9 @@ function SourcesTab({ project }: { project: ResearchProject }) {
             {openSource.abstract && <p className="text-sm text-neutral-700 dark:text-neutral-300 ltr-text leading-relaxed">{openSource.abstract}</p>}
             {openSource.doi && <p className="text-sm text-accent-600 ltr-text" dir="ltr">DOI: {openSource.doi}</p>}
             {openSource.url && (
-              <a href={openSource.url} target="_blank" rel="noopener noreferrer" className="btn-secondary w-full text-xs">
+              <button onClick={() => openExternalUrl(openSource.url!)} className="btn-secondary w-full text-xs">
                 <ExternalLink className="w-4 h-4" /> {t('openOriginal')}
-              </a>
+              </button>
             )}
             <button onClick={() => handleDelete(openSource.id)} className="btn-ghost w-full text-xs text-error-600 dark:text-error-400">
               {t('delete')}
