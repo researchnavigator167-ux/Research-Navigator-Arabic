@@ -1,0 +1,27 @@
+[functions.academic-search]
+verify_jwt = true
+entrypoint = "./functions/academic-search/index.ts"
+
+[functions.ai-assistant]
+verify_jwt = true
+entrypoint = "./functions/ai-assistant/index.ts"
+
+[functions.query-expand]
+verify_jwt = true
+entrypoint = "./functions/query-expand/index.ts"
+
+[functions.paper-analysis]
+verify_jwt = true
+entrypoint = "./functions/paper-analysis/index.ts"
+
+[functions.evidence-analysis]
+verify_jwt = true
+entrypoint = "./functions/evidence-analysis/index.ts"
+
+[functions.gap-discovery]
+verify_jwt = true
+entrypoint = "./functions/gap-discovery/index.ts"
+
+[functions.brief-generate]
+verify_jwt = true
+entrypoint = "./functions/brief-generate/index.ts"
