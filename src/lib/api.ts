@@ -1,16 +1,17 @@
 import { supabase } from './supabase';
+import { supabaseUrl, supabaseAnonKey } from './env';
 
 async function callEdgeFunction<T>(name: string, body: unknown): Promise<T> {
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
 
-  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${name}`;
+  const url = `${supabaseUrl}/functions/v1/${name}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
-      apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      apikey: supabaseAnonKey,
     },
     body: JSON.stringify(body),
   });
