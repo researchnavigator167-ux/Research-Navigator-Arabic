@@ -8,10 +8,17 @@ import {
   ClipboardList, ShieldCheck, Plus, Bookmark, ExternalLink, Sparkles,
   Loader2, X, ChevronDown, Check, AlertTriangle, Info, BookOpen,
   ThumbsUp, ThumbsDown, MinusCircle, HelpCircle, Download, Save,
+  Users, CheckSquare, MessageCircle, Upload, Calendar as CalendarIcon, LayoutDashboard,
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState, ErrorState, Spinner } from '@/components/ui';
 import { openExternalUrl } from '@/lib/native';
+import { ProjectTeam } from '@/components/ProjectTeam';
+import { ProjectTasks } from '@/components/ProjectTasks';
+import { ProjectDiscussions } from '@/components/ProjectDiscussions';
+import { ProjectFiles } from '@/components/ProjectFiles';
+import { ProjectCalendar } from '@/components/ProjectCalendar';
+import { ProjectDashboard } from '@/components/ProjectDashboard';
 import type { ResearchProject, Source, EvidenceItem, ResearchGap, BriefContent, PaperAnalysis, SearchResult } from '@/types';
 
 interface WorkspaceProps {
@@ -19,16 +26,22 @@ interface WorkspaceProps {
   onBack: () => void;
 }
 
-type Tab = 'overview' | 'search' | 'sources' | 'evidence' | 'analysis' | 'gaps' | 'brief' | 'integrity';
+type Tab = 'overview' | 'search' | 'sources' | 'evidence' | 'analysis' | 'gaps' | 'brief' | 'integrity' | 'dashboard' | 'tasks' | 'team' | 'discussions' | 'files' | 'calendar';
 
 const TABS: { id: Tab; key: string; icon: typeof Search }[] = [
   { id: 'overview', key: 'workspaceOverview', icon: BookOpen },
+  { id: 'dashboard', key: 'workspaceDashboard', icon: LayoutDashboard },
   { id: 'search', key: 'workspaceSearch', icon: Search },
   { id: 'sources', key: 'workspaceSources', icon: FileText },
   { id: 'evidence', key: 'workspaceEvidence', icon: LayoutGrid },
   { id: 'analysis', key: 'workspaceAnalysis', icon: BarChart3 },
   { id: 'gaps', key: 'workspaceGaps', icon: GitBranch },
   { id: 'brief', key: 'workspaceBrief', icon: ClipboardList },
+  { id: 'tasks', key: 'workspaceTasks', icon: CheckSquare },
+  { id: 'files', key: 'workspaceFiles', icon: Upload },
+  { id: 'calendar', key: 'workspaceCalendar', icon: CalendarIcon },
+  { id: 'team', key: 'workspaceTeam', icon: Users },
+  { id: 'discussions', key: 'workspaceDiscussions', icon: MessageCircle },
   { id: 'integrity', key: 'workspaceIntegrity', icon: ShieldCheck },
 ];
 
@@ -74,12 +87,18 @@ export function ResearchWorkspace({ project, onBack }: WorkspaceProps) {
       {/* Tab Content */}
       <div className="px-5 py-4">
         {tab === 'overview' && <OverviewTab project={project} />}
+        {tab === 'dashboard' && <ProjectDashboard project={project} />}
         {tab === 'search' && <SearchTab project={project} />}
         {tab === 'sources' && <SourcesTab project={project} />}
         {tab === 'evidence' && <EvidenceTab project={project} />}
         {tab === 'analysis' && <AnalysisTab project={project} />}
         {tab === 'gaps' && <GapsTab project={project} />}
         {tab === 'brief' && <BriefTab project={project} />}
+        {tab === 'tasks' && <ProjectTasks project={project} />}
+        {tab === 'files' && <ProjectFiles project={project} />}
+        {tab === 'calendar' && <ProjectCalendar project={project} />}
+        {tab === 'team' && <ProjectTeam project={project} />}
+        {tab === 'discussions' && <ProjectDiscussions project={project} />}
         {tab === 'integrity' && <IntegrityTab project={project} />}
       </div>
     </div>

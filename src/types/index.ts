@@ -109,6 +109,96 @@ export interface Note {
   created_at: string;
 }
 
+export type ProjectRole = 'owner' | 'editor' | 'viewer';
+
+export interface ProjectMember {
+  id: string;
+  project_id: string;
+  user_id: string;
+  role: ProjectRole;
+  invited_by: string | null;
+  created_at: string;
+}
+
+export type TaskStatus = 'todo' | 'in_progress' | 'done';
+export type TaskPriority = 'low' | 'medium' | 'high';
+
+export interface ProjectTask {
+  id: string;
+  project_id: string;
+  created_by: string;
+  assigned_to: string | null;
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  priority: TaskPriority;
+  due_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CommentTarget = 'project' | 'source' | 'note' | 'evidence' | 'task';
+
+export interface ProjectComment {
+  id: string;
+  project_id: string;
+  user_id: string;
+  target_type: CommentTarget;
+  target_id: string | null;
+  content: string;
+  created_at: string;
+}
+
+export interface ProjectFile {
+  id: string;
+  project_id: string;
+  uploaded_by: string;
+  task_id: string | null;
+  file_name: string;
+  file_path: string;
+  file_type: string;
+  file_size: number;
+  created_at: string;
+}
+
+export type EventType = 'deadline' | 'meeting' | 'milestone' | 'review' | 'other';
+
+export interface ProjectEvent {
+  id: string;
+  project_id: string;
+  created_by: string;
+  task_id: string | null;
+  title: string;
+  description: string | null;
+  event_date: string;
+  event_type: EventType;
+  created_at: string;
+}
+
+export interface ProjectActivity {
+  id: string;
+  project_id: string;
+  user_id: string | null;
+  action: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  description: string | null;
+  created_at: string;
+}
+
+export type NotificationType = 'invite' | 'task_assigned' | 'comment' | 'deadline' | 'update';
+
+export interface ProjectNotification {
+  id: string;
+  user_id: string;
+  project_id: string | null;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  read: boolean;
+  created_at: string;
+}
+
 export interface SearchResult {
   title: string;
   authors: string[];

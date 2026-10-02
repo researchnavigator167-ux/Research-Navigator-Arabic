@@ -34,6 +34,10 @@ Deno.serve(async (req: Request) => {
     let projectContext = "";
     let sourcesContext = "";
     let evidenceContext = "";
+    let notesContext = "";
+    let gapsContext = "";
+    let briefContext = "";
+    let tasksContext = "";
 
     if (projectId) {
       const { data: project } = await supabase
@@ -69,6 +73,53 @@ Deno.serve(async (req: Request) => {
           `الادعاء: ${e.claim} | النوع: ${e.evidence_type} | ${e.evidence_text || ""}`
         ).join("\n");
       }
+
+      const { data: notes } = await supabase
+        .from("notes")
+        .select("content")
+        .eq("project_id", projectId)
+        .limit(10);
+
+      if (notes && notes.length > 0) {
+        notesContext = "الملاحظات:\n" + notes.map((n, i) =>
+          `${i + 1}. ${n.content.substring(0, 150)}`
+        ).join("\n");
+      }
+
+      const { data: gaps } = await supabase
+        .from("research_gaps")
+        .select("gap_type, description")
+        .eq("project_id", projectId)
+        .limit(10);
+
+      if (gaps && gaps.length > 0) {
+        gapsContext = "الفجوات البحثية:\n" + gaps.map((g) =>
+          `${g.gap_type}: ${g.description}`
+        ).join("\n");
+      }
+
+      const { data: brief } = await supabase
+        .from("research_briefs")
+        .select("content")
+        .eq("project_id", projectId)
+        .maybeSingle();
+
+      if (brief && brief.content) {
+        const c = brief.content;
+        briefContext = `ملخص البحث:\nالمشكلة: ${c.problem || ""}\nالسؤال: ${c.question || ""}\nالمفاهيم: ${c.concepts || ""}\nالأدلة المتاحة: ${c.availableEvidence || ""}`;
+      }
+
+      const { data: tasks } = await supabase
+        .from("project_tasks")
+        .select("title, status, priority, due_date")
+        .eq("project_id", projectId)
+        .limit(10);
+
+      if (tasks && tasks.length > 0) {
+        tasksContext = "المهام:\n" + tasks.map((tk) =>
+          `${tk.title} | الحالة: ${tk.status} | الأولوية: ${tk.priority}${tk.due_date ? " | الاستحقاق: " + tk.due_date : ""}`
+        ).join("\n");
+      }
     }
 
     // Build context-aware response
@@ -89,7 +140,11 @@ Deno.serve(async (req: Request) => {
 
 ${projectContext ? `سياق المشروع:\n${projectContext}` : ""}
 ${sourcesContext ? `\n${sourcesContext}` : ""}
-${evidenceContext ? `\n${evidenceContext}` : ""}`;
+${evidenceContext ? `\n${evidenceContext}` : ""}
+${notesContext ? `\n${notesContext}` : ""}
+${gapsContext ? `\n${gapsContext}` : ""}
+${briefContext ? `\n${briefContext}` : ""}
+${tasksContext ? `\n${tasksContext}` : ""}`;
 
     // Generate response based on the query type
     const lowerMsg = message.toLowerCase();

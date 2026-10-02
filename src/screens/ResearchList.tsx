@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useApp } from '@/lib/AppContext';
-import { FolderOpen, Plus, Inbox } from 'lucide-react';
+import { FolderOpen, Plus, Inbox, Users } from 'lucide-react';
 import { EmptyState, SkeletonCard } from '@/components/ui';
 import type { ResearchProject } from '@/types';
 
@@ -13,13 +13,24 @@ interface ResearchListProps {
 export function ResearchList({ onNewResearch, onOpenProject }: ResearchListProps) {
   const { t } = useApp();
   const [projects, setProjects] = useState<ResearchProject[]>([]);
+  const [sharedIds, setSharedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const { data } = await supabase.from('research_projects').select('*').order('updated_at', { ascending: false });
-      setProjects(data || []);
+      const [projRes, memberRes] = await Promise.all([
+        supabase.from('research_projects').select('*').order('updated_at', { ascending: false }),
+        supabase.from('project_members').select('project_id, role'),
+      ]);
+      setProjects(projRes.data || []);
+      const owned = new Set<string>();
+      const shared = new Set<string>();
+      (memberRes.data || []).forEach((m: { project_id: string; role: string }) => {
+        if (m.role !== 'owner') shared.add(m.project_id);
+        else owned.add(m.project_id);
+      });
+      setSharedIds(shared);
       setLoading(false);
     }
     load();
@@ -82,6 +93,11 @@ export function ResearchList({ onNewResearch, onOpenProject }: ResearchListProps
                 <div className="flex items-center gap-2 flex-wrap">
                   {project.field && (
                     <span className="badge bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400">{project.field}</span>
+                  )}
+                  {sharedIds.has(project.id) && (
+                    <span className="badge bg-accent-50 text-accent-700 dark:bg-accent-900/20 dark:text-accent-400 text-[10px]">
+                      <Users className="w-3 h-3" /> {t('sharedProject')}
+                    </span>
                   )}
                   {project.keywords?.slice(0, 2).map((kw) => (
                     <span key={kw} className="badge bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">{kw}</span>
