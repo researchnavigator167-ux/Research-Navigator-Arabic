@@ -643,13 +643,16 @@ function EvidenceTab({ project }: { project: ResearchProject }) {
     setEvidence((prev) => prev.filter((e) => e.id !== id));
   };
 
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+
   const handleAnalyze = async () => {
     setAnalyzing(true);
+    setAnalysisError(null);
     try {
       const data = await callEdgeFunction<typeof analysis>('evidence-analysis', { projectId: project.id });
       setAnalysis(data);
     } catch {
-      // ignore
+      setAnalysisError(t('error'));
     } finally {
       setAnalyzing(false);
     }
@@ -674,6 +677,12 @@ function EvidenceTab({ project }: { project: ResearchProject }) {
         <button onClick={handleAnalyze} disabled={analyzing} className="btn-secondary w-full mb-4 text-xs">
           {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Sparkles className="w-4 h-4" /> {t('analyzeEvidence')}</>}
         </button>
+      )}
+
+      {analysisError && (
+        <div className="mb-4 rounded-xl bg-error-50 dark:bg-error-900/20 border border-error-100 dark:border-error-900/30 px-4 py-3 text-xs text-error-700 dark:text-error-400">
+          {analysisError}
+        </div>
       )}
 
       {analysis && (
@@ -862,6 +871,7 @@ function GapsTab({ project }: { project: ResearchProject }) {
   const [gaps, setGaps] = useState<ResearchGap[]>([]);
   const [loading, setLoading] = useState(true);
   const [discovering, setDiscovering] = useState(false);
+  const [gapError, setGapError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -875,12 +885,13 @@ function GapsTab({ project }: { project: ResearchProject }) {
 
   const handleDiscover = async () => {
     setDiscovering(true);
+    setGapError(null);
     try {
       await callEdgeFunction('gap-discovery', { projectId: project.id });
       const { data } = await supabase.from('research_gaps').select('*').eq('project_id', project.id).order('created_at', { ascending: false });
       setGaps(data || []);
     } catch {
-      // ignore
+      setGapError(t('error'));
     } finally {
       setDiscovering(false);
     }
@@ -907,6 +918,12 @@ function GapsTab({ project }: { project: ResearchProject }) {
       <button onClick={handleDiscover} disabled={discovering} className="btn-secondary w-full mb-4 text-xs">
         {discovering ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Sparkles className="w-4 h-4" /> {t('discoverGaps')}</>}
       </button>
+
+      {gapError && (
+        <div className="mb-4 rounded-xl bg-error-50 dark:bg-error-900/20 border border-error-100 dark:border-error-900/30 px-4 py-3 text-xs text-error-700 dark:text-error-400">
+          {gapError}
+        </div>
+      )}
 
       <div className="mb-4 rounded-xl bg-warning-50 border border-warning-100 px-4 py-3 text-xs text-warning-700 dark:bg-warning-900/20 dark:border-warning-900/30 dark:text-warning-400 flex items-start gap-2">
         <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
@@ -956,6 +973,7 @@ function BriefTab({ project }: { project: ResearchProject }) {
   const [brief, setBrief] = useState<BriefContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [briefError, setBriefError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [editedBrief, setEditedBrief] = useState<BriefContent>({});
 
@@ -974,12 +992,13 @@ function BriefTab({ project }: { project: ResearchProject }) {
 
   const handleGenerate = async () => {
     setGenerating(true);
+    setBriefError(null);
     try {
       const data = await callEdgeFunction<{ brief: BriefContent }>('brief-generate', { projectId: project.id });
       setBrief(data.brief);
       setEditedBrief(data.brief);
     } catch {
-      // ignore
+      setBriefError(t('error'));
     } finally {
       setGenerating(false);
     }
@@ -1035,12 +1054,19 @@ function BriefTab({ project }: { project: ResearchProject }) {
 
   if (!brief && !generating) {
     return (
-      <EmptyState
+      <div className="animate-fade-in">
+        {briefError && (
+          <div className="mb-4 rounded-xl bg-error-50 dark:bg-error-900/20 border border-error-100 dark:border-error-900/30 px-4 py-3 text-xs text-error-700 dark:text-error-400">
+            {briefError}
+          </div>
+        )}
+        <EmptyState
         icon={<ClipboardList className="w-8 h-8 text-primary-700 dark:text-primary-400" />}
         title={t('researchBrief')}
         description={t('generateBrief')}
         action={<button onClick={handleGenerate} className="btn-primary"><Sparkles className="w-4 h-4" /> {t('generateBrief')}</button>}
       />
+      </div>
     );
   }
 

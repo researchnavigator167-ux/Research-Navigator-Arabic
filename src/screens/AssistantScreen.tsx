@@ -3,7 +3,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { useApp } from '@/lib/AppContext';
 import { callEdgeFunction } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
-import { Send, Plus, Bot, User, Loader2, Info } from 'lucide-react';
+import { Send, Plus, Bot, User, Loader2 } from 'lucide-react';
 import { EmptyState } from '@/components/ui';
 import type { AIConversation, AIMessage } from '@/types';
 
@@ -72,7 +72,6 @@ export function AssistantScreen() {
       const data = await callEdgeFunction<{ response: string; conversationId: string }>('ai-assistant', {
         message: userMessage,
         conversationId: activeConvId,
-        userId: user?.id,
       });
       setMessages((prev) => [...prev, { role: 'assistant', content: data.response }]);
       if (data.conversationId !== activeConvId) {

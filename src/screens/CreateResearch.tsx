@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/AuthContext';
 import { useApp } from '@/lib/AppContext';
 import { callEdgeFunction } from '@/lib/api';
 import { Sparkles, Plus, X, ArrowRight, Loader2 } from 'lucide-react';
@@ -18,7 +17,6 @@ const FIELDS = [
 ];
 
 export function CreateResearch({ onCreated, onCancel }: CreateResearchProps) {
-  const { user } = useAuth();
   const { t, isRTL } = useApp();
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
@@ -35,7 +33,6 @@ export function CreateResearch({ onCreated, onCancel }: CreateResearchProps) {
     keywords: [] as string[],
   });
   const [keywordInput, setKeywordInput] = useState('');
-  const [saveError, setSaveError] = useState<string | null>(null);
 
   const update = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -77,7 +74,6 @@ export function CreateResearch({ onCreated, onCancel }: CreateResearchProps) {
   const handleSave = async () => {
     if (!form.title || !form.topic || saving) return;
     setSaving(true);
-    setSaveError(null);
     try {
       const { data, error } = await supabase
         .from('research_projects')
@@ -95,9 +91,7 @@ export function CreateResearch({ onCreated, onCancel }: CreateResearchProps) {
 
       if (error) throw error;
       if (data) onCreated(data as ResearchProject);
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : t('error'));
-    } finally {
+    } catch {
       setSaving(false);
     }
   };
@@ -348,12 +342,6 @@ export function CreateResearch({ onCreated, onCancel }: CreateResearchProps) {
                 </div>
               )}
             </div>
-
-            {saveError && (
-              <div className="rounded-xl bg-error-50 dark:bg-error-900/20 border border-error-100 dark:border-error-900/30 px-4 py-3 text-xs text-error-700 dark:text-error-400">
-                {saveError}
-              </div>
-            )}
 
             <div className="flex gap-3 pt-2">
               <button onClick={() => setStep(1)} disabled={saving} className="btn-ghost flex-1">

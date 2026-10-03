@@ -16,18 +16,55 @@ interface ChatMessage {
   content: string;
 }
 
+async function getAuthenticatedUser(req: Request): Promise<string | null> {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) return null;
+  const token = authHeader.replace("Bearer ", "");
+  const { data } = await supabase.auth.getUser(token);
+  return data.user?.id || null;
+}
+
+async function verifyProjectMembership(userId: string, projectId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("project_members")
+    .select("user_id")
+    .eq("project_id", projectId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  return !!data;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
-    const { message, projectId, conversationId, history, userId } = await req.json();
+    const authUserId = await getAuthenticatedUser(req);
+    if (!authUserId) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { message, projectId, conversationId } = await req.json();
     if (!message) {
       return new Response(JSON.stringify({ error: "Message is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Verify project membership before fetching any project data
+    if (projectId) {
+      const isMember = await verifyProjectMembership(authUserId, projectId);
+      if (!isMember) {
+        return new Response(JSON.stringify({ error: "Access denied" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // Fetch project context
@@ -187,21 +224,21 @@ ${tasksContext ? `\n${tasksContext}` : ""}`;
       response = `سؤالك: "${message}"\n\n${projectContext ? `في إطار مشروعك البحثي حول: ${projectContext.split("\n")[0].replace("مشروع البحث: ", "")}` : ""}\n\nيمكنني مساعدتك في:\n- توليد المصطلحات الإنجليزية المناسبة\n- تحليل ومقارنة المصادر المتاحة\n- تحليل الأدلة واكتشاف الاتجاهات\n- تحديد الفجوات البحثية المحتملة\n\n${sourcesContext ? "لديك " + sourcesContext.split("\n").filter((l: string) => l.match(/^\d+\./)).length + " مصادر محفوظة في هذا المشروع يمكنني تحليلها." : "لا توجد مصادر محفوظة بعد. يُنصح بالبحث وحفظ المصادر أولاً."}`;
     }
 
-    // Save conversation
+    // Save conversation using the authenticated user id
     let convId = conversationId;
-    if (!convId && userId) {
+    if (!convId) {
       const { data: newConv } = await supabase
         .from("ai_conversations")
-        .insert({ user_id: userId, project_id: projectId || null, title: message.substring(0, 50) })
+        .insert({ user_id: authUserId, project_id: projectId || null, title: message.substring(0, 50) })
         .select("id")
         .single();
       convId = newConv?.id;
     }
 
-    if (convId && userId) {
+    if (convId) {
       await supabase.from("ai_messages").insert([
-        { user_id: userId, conversation_id: convId, role: "user", content: message },
-        { user_id: userId, conversation_id: convId, role: "assistant", content: response },
+        { user_id: authUserId, conversation_id: convId, role: "user", content: message },
+        { user_id: authUserId, conversation_id: convId, role: "assistant", content: response },
       ]);
     }
 
