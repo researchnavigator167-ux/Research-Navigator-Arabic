@@ -75,7 +75,7 @@ export function CreateResearch({ onCreated, onCancel }: CreateResearchProps) {
   };
 
   const handleSave = async () => {
-    if (!form.title || !form.topic) return;
+    if (!form.title || !form.topic || saving) return;
     setSaving(true);
     setSaveError(null);
     try {
@@ -349,20 +349,28 @@ export function CreateResearch({ onCreated, onCancel }: CreateResearchProps) {
               )}
             </div>
 
-            <div className="flex gap-3 pt-2">
-              <button onClick={() => setStep(1)} className="btn-ghost flex-1">
-                {t('back')}
-              </button>
-              <button onClick={handleSave} disabled={saving || !form.title} className="btn-primary flex-1">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t('save')}
-              </button>
-            </div>
-
             {saveError && (
               <div className="rounded-xl bg-error-50 dark:bg-error-900/20 border border-error-100 dark:border-error-900/30 px-4 py-3 text-xs text-error-700 dark:text-error-400">
                 {saveError}
               </div>
             )}
+
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => setStep(1)} disabled={saving} className="btn-ghost flex-1">
+                {t('back')}
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving || !canNext1}
+                className="btn-primary flex-1"
+              >
+                {saving ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> {t('loading')}</>
+                ) : (
+                  t('save')
+                )}
+              </button>
+            </div>
           </div>
         )}
       </div>
