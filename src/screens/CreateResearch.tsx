@@ -33,6 +33,7 @@ export function CreateResearch({ onCreated, onCancel }: CreateResearchProps) {
     keywords: [] as string[],
   });
   const [keywordInput, setKeywordInput] = useState('');
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const update = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -74,6 +75,7 @@ export function CreateResearch({ onCreated, onCancel }: CreateResearchProps) {
   const handleSave = async () => {
     if (!form.title || !form.topic || saving) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const { data, error } = await supabase
         .from('research_projects')
@@ -92,6 +94,7 @@ export function CreateResearch({ onCreated, onCancel }: CreateResearchProps) {
       if (error) throw error;
       if (data) onCreated(data as ResearchProject);
     } catch {
+      setSaveError(t('error'));
       setSaving(false);
     }
   };
@@ -355,10 +358,19 @@ export function CreateResearch({ onCreated, onCancel }: CreateResearchProps) {
                 {saving ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> {t('loading')}</>
                 ) : (
-                  t('save')
+                  <>
+                    {t('next')}
+                    <ArrowIcon className={`w-4 h-4 ${arrowClass}`} />
+                  </>
                 )}
               </button>
             </div>
+
+            {saveError && (
+              <div className="rounded-xl bg-error-50 dark:bg-error-900/20 border border-error-100 dark:border-error-900/30 px-4 py-3 text-xs text-error-700 dark:text-error-400">
+                {saveError}
+              </div>
+            )}
           </div>
         )}
       </div>
