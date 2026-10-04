@@ -91,6 +91,17 @@ export const translations: Record<Language, Translations> = {
     potentialQuestions: 'أسئلة بحث محتملة',
     researchAxes: 'محاور بحثية',
 
+    // Setup Steps
+    setupStep3: 'البحث عن المصادر',
+    setupStep3Desc: 'ابحث عن مصادر أكاديمية ذات صلة ببحثك واحفظها',
+    setupStep4: 'مراجعة وبدء البحث',
+    setupStep4Desc: 'راجع بيانات بحثك وابدأ مساحة العمل',
+    setupSearchHint: 'تم اقتراح كلمات البحث من بياناتك. اضغط بحث للعثور على مصادر',
+    setupSkipSearch: 'تخطي البحث لاحقًا',
+    setupReviewTitle: 'مراجعة بيانات البحث',
+    setupEnterWorkspace: 'ابدأ مساحة البحث',
+    setupSourcesSaved: 'مصادر محفوظة',
+
     // Research Workspace
     workspaceOverview: 'نظرة عامة',
     workspaceSearch: 'البحث الأكاديمي',
@@ -471,6 +482,17 @@ export const translations: Record<Language, Translations> = {
     synonyms: 'Synonyms',
     potentialQuestions: 'Potential Research Questions',
     researchAxes: 'Research Axes',
+
+    // Setup Steps
+    setupStep3: 'Search for Sources',
+    setupStep3Desc: 'Search for academic sources related to your research and save them',
+    setupStep4: 'Review and Start',
+    setupStep4Desc: 'Review your research details and start the workspace',
+    setupSearchHint: 'Search terms suggested from your data. Press search to find sources',
+    setupSkipSearch: 'Skip search for later',
+    setupReviewTitle: 'Review Research Details',
+    setupEnterWorkspace: 'Start Research Workspace',
+    setupSourcesSaved: 'sources saved',
 
     workspaceOverview: 'Overview',
     workspaceSearch: 'Academic Search',
