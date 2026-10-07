@@ -215,6 +215,226 @@ export interface SearchResult {
   providers: string[];
 }
 
+// ============================================================================
+// Classroom / Educational System Types
+// ============================================================================
+export type UserRole = 'student' | 'doctor';
+
+export interface UserRoleInfo {
+  user_id: string;
+  role: UserRole;
+  display_name: string | null;
+  created_at: string;
+}
+
+export type AssignmentType = 'text' | 'file' | 'research_project';
+export type SubmissionStatus = 'submitted' | 'reviewed' | 'graded' | 'returned';
+export type FeedbackType = 'comment' | 'correction' | 'praise' | 'suggestion';
+
+export interface ClassRoom {
+  id: string;
+  doctor_id: string;
+  name: string;
+  description: string | null;
+  course_code: string | null;
+  section: string | null;
+  academic_year: string | null;
+  join_code: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClassMember {
+  id: string;
+  class_id: string;
+  user_id: string;
+  joined_at: string;
+  display_name?: string | null;
+  email?: string;
+  role?: UserRole;
+}
+
+export interface Assignment {
+  id: string;
+  class_id: string;
+  doctor_id: string;
+  title: string;
+  description: string | null;
+  instructions: string | null;
+  assignment_type: AssignmentType;
+  max_grade: number;
+  due_date: string | null;
+  linked_project_id: string | null;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssignmentSubmission {
+  id: string;
+  assignment_id: string;
+  student_id: string;
+  content: string | null;
+  file_path: string | null;
+  file_name: string | null;
+  file_type: string | null;
+  file_size: number | null;
+  linked_project_id: string | null;
+  version: number;
+  status: SubmissionStatus;
+  grade: number | null;
+  graded_at: string | null;
+  created_at: string;
+}
+
+export interface AssignmentFeedback {
+  id: string;
+  submission_id: string;
+  doctor_id: string;
+  content: string;
+  feedback_type: FeedbackType;
+  created_at: string;
+}
+
+export interface Announcement {
+  id: string;
+  class_id: string;
+  doctor_id: string;
+  title: string;
+  body: string | null;
+  created_at: string;
+}
+
+export type ClassNotificationType =
+  | 'assignment_posted'
+  | 'submission_graded'
+  | 'feedback_received'
+  | 'announcement'
+  | 'joined_class';
+
+export interface ClassNotification {
+  id: string;
+  user_id: string;
+  class_id: string | null;
+  assignment_id: string | null;
+  type: ClassNotificationType;
+  title: string;
+  body: string | null;
+  read: boolean;
+  created_at: string;
+}
+
+// ============================================================================
+// Classroom / Educational System Types
+// ============================================================================
+export type UserRole = 'student' | 'doctor';
+
+export interface UserRoleInfo {
+  user_id: string;
+  role: UserRole;
+  display_name: string | null;
+  created_at: string;
+}
+
+export type AssignmentType = 'text' | 'file' | 'research_project';
+export type SubmissionStatus = 'submitted' | 'reviewed' | 'graded' | 'returned';
+export type FeedbackType = 'comment' | 'correction' | 'praise' | 'suggestion';
+
+export interface ClassRoom {
+  id: string;
+  doctor_id: string;
+  name: string;
+  description: string | null;
+  course_code: string | null;
+  section: string | null;
+  academic_year: string | null;
+  join_code: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClassMember {
+  id: string;
+  class_id: string;
+  user_id: string;
+  joined_at: string;
+  display_name?: string | null;
+  email?: string;
+  role?: UserRole;
+}
+
+export interface Assignment {
+  id: string;
+  class_id: string;
+  doctor_id: string;
+  title: string;
+  description: string | null;
+  instructions: string | null;
+  assignment_type: AssignmentType;
+  max_grade: number;
+  due_date: string | null;
+  linked_project_id: string | null;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssignmentSubmission {
+  id: string;
+  assignment_id: string;
+  student_id: string;
+  content: string | null;
+  file_path: string | null;
+  file_name: string | null;
+  file_type: string | null;
+  file_size: number | null;
+  linked_project_id: string | null;
+  version: number;
+  status: SubmissionStatus;
+  grade: number | null;
+  graded_at: string | null;
+  created_at: string;
+}
+
+export interface AssignmentFeedback {
+  id: string;
+  submission_id: string;
+  doctor_id: string;
+  content: string;
+  feedback_type: FeedbackType;
+  created_at: string;
+}
+
+export interface Announcement {
+  id: string;
+  class_id: string;
+  doctor_id: string;
+  title: string;
+  body: string | null;
+  created_at: string;
+}
+
+export type ClassNotificationType =
+  | 'assignment_posted'
+  | 'submission_graded'
+  | 'feedback_received'
+  | 'announcement'
+  | 'joined_class';
+
+export interface ClassNotification {
+  id: string;
+  user_id: string;
+  class_id: string | null;
+  assignment_id: string | null;
+  type: ClassNotificationType;
+  title: string;
+  body: string | null;
+  read: boolean;
+  created_at: string;
+}
+
 export interface QueryExpansion {
   concepts: string[];
   keywords: string[];

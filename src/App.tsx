@@ -11,18 +11,21 @@ import { ResearchWorkspace } from '@/screens/ResearchWorkspace';
 import { DiscoverScreen } from '@/screens/DiscoverScreen';
 import { AssistantScreen } from '@/screens/AssistantScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
+import { ClassroomScreen } from '@/screens/ClassroomScreen';
 import { BottomNav, type Tab } from '@/components/BottomNav';
 import { LoadingScreen } from '@/components/ui';
 import { initNativePlugins, setupBackButton } from '@/lib/native';
-import type { ResearchProject } from '@/types';
+import type { ResearchProject, ClassRoom } from '@/types';
 
 type Screen =
   | { name: 'main'; tab: Tab }
   | { name: 'create' }
-  | { name: 'workspace'; project: ResearchProject };
+  | { name: 'workspace'; project: ResearchProject }
+  | { name: 'classDetail'; classRoom: ClassRoom }
+  | { name: 'assignmentDetail'; assignmentId: string; classId: string };
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, loading, roleLoading, role } = useAuth();
   const [onboarded, setOnboarded] = useState<boolean>(() => {
     return localStorage.getItem('rn-onboarded') === 'true';
   });
@@ -41,6 +44,10 @@ function AppContent() {
         setScreen({ name: 'main', tab: 'research' });
       } else if (current.name === 'create') {
         setScreen({ name: 'main', tab: 'research' });
+      } else if (current.name === 'classDetail') {
+        setScreen({ name: 'main', tab: 'classroom' });
+      } else if (current.name === 'assignmentDetail') {
+        setScreen({ name: 'main', tab: 'classroom' });
       } else if (current.name === 'main' && current.tab !== 'home') {
         setScreen({ name: 'main', tab: 'home' });
       }
@@ -49,6 +56,8 @@ function AppContent() {
     const canGoBack =
       screen.name === 'workspace' ||
       screen.name === 'create' ||
+      screen.name === 'classDetail' ||
+      screen.name === 'assignmentDetail' ||
       (screen.name === 'main' && screen.tab !== 'home');
 
     const listenerPromise = setupBackButton(handleBack, canGoBack);
@@ -58,7 +67,7 @@ function AppContent() {
     };
   }, [screen]);
 
-  if (loading) {
+  if (loading || roleLoading) {
     return <LoadingScreen />;
   }
 
@@ -83,6 +92,11 @@ function AppContent() {
   const handleNavigate = (tab: Tab) => setScreen({ name: 'main', tab });
   const handleTabChange = (tab: Tab) => setScreen({ name: 'main', tab });
 
+  const handleOpenClass = (classRoom: ClassRoom) => setScreen({ name: 'classDetail', classRoom });
+  const handleOpenAssignment = (assignmentId: string, classId: string) =>
+    setScreen({ name: 'assignmentDetail', assignmentId, classId });
+  const handleClassBack = () => setScreen({ name: 'main', tab: 'classroom' });
+
   if (screen.name === 'create') {
     return (
       <CreateResearch
@@ -96,6 +110,26 @@ function AppContent() {
 
   if (screen.name === 'workspace') {
     return <ResearchWorkspace project={screen.project} onBack={handleBack} />;
+  }
+
+  if (screen.name === 'classDetail') {
+    return (
+      <ClassDetailScreen
+        classRoom={screen.classRoom}
+        onBack={handleClassBack}
+        onOpenAssignment={(assignmentId) => handleOpenAssignment(assignmentId, screen.classRoom.id)}
+      />
+    );
+  }
+
+  if (screen.name === 'assignmentDetail') {
+    return (
+      <AssignmentDetailScreen
+        assignmentId={screen.assignmentId}
+        classId={screen.classId}
+        onBack={handleClassBack}
+      />
+    );
   }
 
   // Main screens with bottom nav
@@ -113,11 +147,21 @@ function AppContent() {
       )}
       {screen.tab === 'discover' && <DiscoverScreen />}
       {screen.tab === 'assistant' && <AssistantScreen />}
+      {screen.tab === 'classroom' && (
+        <ClassroomScreen
+          role={role}
+          onOpenClass={handleOpenClass}
+        />
+      )}
       {screen.tab === 'account' && <SettingsScreen />}
       <BottomNav active={screen.tab} onChange={handleTabChange} />
     </>
   );
 }
+
+// Inline imports for new screens to avoid circular dependency issues
+import { ClassDetailScreen } from '@/screens/ClassDetailScreen';
+import { AssignmentDetailScreen } from '@/screens/AssignmentDetailScreen';
 
 export default function App() {
   return (

@@ -4,7 +4,7 @@ import { useApp } from '@/lib/AppContext';
 import { useTheme } from '@/lib/ThemeContext';
 import {
   Globe, Moon, Sun, Monitor, Bell, Lock, Database, Info,
-  LogOut, Trash2, ChevronRight, BookOpen, Type,
+  LogOut, Trash2, ChevronRight, BookOpen, Type, GraduationCap,
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import type { Language } from '@/lib/i18n';
