@@ -25,7 +25,7 @@ export function AuthScreen() {
     try {
       if (mode === 'login') {
         const { error } = await signIn(email, password);
-        if (error) setError(t('loginError'));
+        if (error) setError(mapSignInError(error));
       } else if (mode === 'register') {
         if (password !== confirmPassword) {
           setError('كلمتا المرور غير متطابقتين');
@@ -37,7 +37,7 @@ export function AuthScreen() {
         }
         const { error } = await signUp(email, password);
         if (error) {
-          setError(t('registerError'));
+          setError(mapSignUpError(error));
         } else {
           setSuccess(t('registerSuccess'));
           setMode('login');
@@ -207,4 +207,36 @@ export function AuthScreen() {
       </div>
     </div>
   );
+}
+
+function mapSignUpError(code: string): string {
+  switch (code) {
+    case 'EMAIL_ALREADY_REGISTERED':
+      return 'البريد الإلكتروني مستخدم بالفعل. حاول تسجيل الدخول أو استخدم بريدًا آخر.';
+    case 'WEAK_PASSWORD':
+      return 'كلمة المرور ضعيفة. استخدم 6 أحرف على الأقل مع أرقام ورموز.';
+    case 'INVALID_EMAIL':
+      return 'البريد الإلكتروني غير صالح.';
+    case 'RATE_LIMITED':
+      return 'تم تجاوز عدد المحاولات المسموح. حاول مرة أخرى لاحقًا.';
+    case 'NETWORK_ERROR':
+      return 'تعذر الاتصال بالخادم. تحقق من اتصالك بالإنترنت.';
+    case 'EMAIL_CONFIRMATION_REQUIRED':
+      return 'تم إنشاء الحساب. يرجى تأكيد بريدك الإلكتروني قبل تسجيل الدخول.';
+    default:
+      return 'تعذر إنشاء الحساب. تحقق من البيانات وحاول مرة أخرى.';
+  }
+}
+
+function mapSignInError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes('invalid credentials') || m.includes('invalid login'))
+    return 'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
+  if (m.includes('email not confirmed'))
+    return 'يرجى تأكيد بريدك الإلكتروني قبل تسجيل الدخول.';
+  if (m.includes('rate limit') || m.includes('too many'))
+    return 'تم تجاوز عدد المحاولات. حاول لاحقًا.';
+  if (m.includes('network') || m.includes('fetch'))
+    return 'تعذر الاتصال بالخادم. تحقق من اتصالك بالإنترنت.';
+  return 'تعذر تسجيل الدخول. تحقق من البيانات وحاول مرة أخرى.';
 }

@@ -82,8 +82,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password });
-    return { error: error?.message ?? null };
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) {
+      return { error: mapAuthError(error.message) };
+    }
+    if (data.user && !data.session) {
+      return { error: 'EMAIL_CONFIRMATION_REQUIRED' };
+    }
+    return { error: null };
   };
 
   const signOut = async () => {
@@ -117,4 +123,19 @@ export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
+}
+
+function mapAuthError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes('already registered') || m.includes('already been registered') || m.includes('user already exists'))
+    return 'EMAIL_ALREADY_REGISTERED';
+  if (m.includes('password') && (m.includes('weak') || m.includes('short') || m.includes('at least') || m.includes('length')))
+    return 'WEAK_PASSWORD';
+  if (m.includes('invalid email') || m.includes('email_address_invalid') || m.includes('not a valid email'))
+    return 'INVALID_EMAIL';
+  if (m.includes('rate limit') || m.includes('too many'))
+    return 'RATE_LIMITED';
+  if (m.includes('network') || m.includes('fetch') || m.includes('failed to fetch') || m.includes('connection'))
+    return 'NETWORK_ERROR';
+  return 'AUTH_ERROR';
 }
