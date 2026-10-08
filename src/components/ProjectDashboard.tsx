@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useApp } from '@/lib/AppContext';
 import { computeProjectProgress, fetchActivityLog, fetchMembers } from '@/lib/collaboration';
-import { Spinner } from '@/components/ui';
+import { Spinner, ErrorState } from '@/components/ui';
 import { TrendingUp, FileText, LayoutGrid, StickyNote, CheckCircle2, Users, Activity } from 'lucide-react';
 import type { ProjectMember, ProjectActivity, ResearchProject } from '@/types';
 
@@ -13,34 +13,44 @@ export function ProjectDashboard({ project }: { project: ResearchProject }) {
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [activity, setActivity] = useState<ProjectActivity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     async function load() {
       setLoading(true);
-      const [prog, memberData, activityData, src, evi, notes, tasksDone, tasksTotal] = await Promise.all([
-        computeProjectProgress(project.id),
-        fetchMembers(project.id),
-        fetchActivityLog(project.id, 10),
-        supabase.from('sources').select('id', { count: 'exact' }).eq('project_id', project.id),
-        supabase.from('evidence_items').select('id', { count: 'exact' }).eq('project_id', project.id),
-        supabase.from('notes').select('id', { count: 'exact' }).eq('project_id', project.id),
-        supabase.from('project_tasks').select('id', { count: 'exact' }).eq('project_id', project.id).eq('status', 'done'),
-        supabase.from('project_tasks').select('id', { count: 'exact' }).eq('project_id', project.id),
-      ]);
-      setProgress(prog);
-      setMembers(memberData);
-      setActivity(activityData);
-      setCounts({
-        sources: src.count || 0,
-        evidence: evi.count || 0,
-        notes: notes.count || 0,
-        tasksDone: tasksDone.count || 0,
-        tasksTotal: tasksTotal.count || 0,
-      });
-      setLoading(false);
+      setError(null);
+      try {
+        const [prog, memberData, activityData, src, evi, notes, tasksDone, tasksTotal] = await Promise.all([
+          computeProjectProgress(project.id),
+          fetchMembers(project.id),
+          fetchActivityLog(project.id, 10),
+          supabase.from('sources').select('id', { count: 'exact' }).eq('project_id', project.id),
+          supabase.from('evidence_items').select('id', { count: 'exact' }).eq('project_id', project.id),
+          supabase.from('notes').select('id', { count: 'exact' }).eq('project_id', project.id),
+          supabase.from('project_tasks').select('id', { count: 'exact' }).eq('project_id', project.id).eq('status', 'done'),
+          supabase.from('project_tasks').select('id', { count: 'exact' }).eq('project_id', project.id),
+        ]);
+        if (cancelled) return;
+        setProgress(prog);
+        setMembers(memberData);
+        setActivity(activityData);
+        setCounts({
+          sources: src.count || 0,
+          evidence: evi.count || 0,
+          notes: notes.count || 0,
+          tasksDone: tasksDone.count || 0,
+          tasksTotal: tasksTotal.count || 0,
+        });
+      } catch {
+        if (!cancelled) setError(t('error'));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
     load();
-  }, [project.id]);
+    return () => { cancelled = true; };
+  }, [project.id, t]);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -57,6 +67,7 @@ export function ProjectDashboard({ project }: { project: ResearchProject }) {
   };
 
   if (loading) return <div className="flex justify-center py-8"><Spinner /></div>;
+  if (error) return <ErrorState message={error} />;
 
   const statCards = [
     { icon: FileText, label: t('sourceCount'), value: counts.sources, color: 'text-primary-700 dark:text-primary-400' },

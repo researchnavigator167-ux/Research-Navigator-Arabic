@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { useApp } from '@/lib/AppContext';
 import { fetchFiles, uploadFile, downloadFile, deleteFile } from '@/lib/collaboration';
-import { EmptyState, Spinner } from '@/components/ui';
+import { EmptyState, ErrorState, Spinner } from '@/components/ui';
 import { Upload, Download, Trash2, FileText, File, FileType } from 'lucide-react';
 import type { ProjectFile, ResearchProject } from '@/types';
 
@@ -27,19 +27,29 @@ export function ProjectFiles({ project }: { project: ResearchProject }) {
   const { t } = useApp();
   const [files, setFiles] = useState<ProjectFile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    let cancelled = false;
     async function load() {
       setLoading(true);
-      const data = await fetchFiles(project.id);
-      setFiles(data);
-      setLoading(false);
+      setLoadError(null);
+      try {
+        const data = await fetchFiles(project.id);
+        if (cancelled) return;
+        setFiles(data);
+      } catch {
+        if (!cancelled) setLoadError(t('error'));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
     load();
-  }, [project.id]);
+    return () => { cancelled = true; };
+  }, [project.id, t]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -69,6 +79,7 @@ export function ProjectFiles({ project }: { project: ResearchProject }) {
   };
 
   if (loading) return <div className="flex justify-center py-8"><Spinner /></div>;
+  if (loadError) return <ErrorState message={loadError} />;
 
   return (
     <div className="animate-fade-in">

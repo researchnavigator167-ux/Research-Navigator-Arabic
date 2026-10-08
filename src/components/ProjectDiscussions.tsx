@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { useApp } from '@/lib/AppContext';
 import { fetchComments, addComment, deleteComment, fetchMembers } from '@/lib/collaboration';
-import { EmptyState, Spinner } from '@/components/ui';
+import { EmptyState, ErrorState, Spinner } from '@/components/ui';
 import { MessageCircle, Trash2, Send } from 'lucide-react';
 import type { ProjectComment, ProjectMember, ResearchProject } from '@/types';
 
@@ -12,22 +12,32 @@ export function ProjectDiscussions({ project }: { project: ResearchProject }) {
   const [comments, setComments] = useState<ProjectComment[]>([]);
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     async function load() {
       setLoading(true);
-      const [commentData, memberData] = await Promise.all([
-        fetchComments(project.id),
-        fetchMembers(project.id),
-      ]);
-      setComments(commentData);
-      setMembers(memberData);
-      setLoading(false);
+      setError(null);
+      try {
+        const [commentData, memberData] = await Promise.all([
+          fetchComments(project.id),
+          fetchMembers(project.id),
+        ]);
+        if (cancelled) return;
+        setComments(commentData);
+        setMembers(memberData);
+      } catch {
+        if (!cancelled) setError(t('error'));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
     load();
-  }, [project.id]);
+    return () => { cancelled = true; };
+  }, [project.id, t]);
 
   const handleSend = async () => {
     if (!input.trim() || !user) return;
@@ -68,6 +78,7 @@ export function ProjectDiscussions({ project }: { project: ResearchProject }) {
   };
 
   if (loading) return <div className="flex justify-center py-8"><Spinner /></div>;
+  if (error) return <ErrorState message={error} />;
 
   return (
     <div className="animate-fade-in">

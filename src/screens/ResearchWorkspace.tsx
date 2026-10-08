@@ -1152,22 +1152,33 @@ function IntegrityTab({ project }: { project: ResearchProject }) {
   const [sources, setSources] = useState<Source[]>([]);
   const [evidence, setEvidence] = useState<EvidenceItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     async function load() {
       setLoading(true);
-      const [srcRes, eviRes] = await Promise.all([
-        supabase.from('sources').select('*').eq('project_id', project.id),
-        supabase.from('evidence_items').select('*').eq('project_id', project.id),
-      ]);
-      setSources(srcRes.data || []);
-      setEvidence(eviRes.data || []);
-      setLoading(false);
+      setError(null);
+      try {
+        const [srcRes, eviRes] = await Promise.all([
+          supabase.from('sources').select('*').eq('project_id', project.id),
+          supabase.from('evidence_items').select('*').eq('project_id', project.id),
+        ]);
+        if (cancelled) return;
+        setSources(srcRes.data || []);
+        setEvidence(eviRes.data || []);
+      } catch {
+        if (!cancelled) setError(t('error'));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
     load();
-  }, [project.id]);
+    return () => { cancelled = true; };
+  }, [project.id, t]);
 
   if (loading) return <div className="card animate-pulse h-40" />;
+  if (error) return <ErrorState message={error} />;
 
   const issues: { type: string; label: string; description: string; severity: 'warning' | 'info' | 'error' }[] = [];
 

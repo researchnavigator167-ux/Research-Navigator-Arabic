@@ -3,7 +3,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { useApp } from '@/lib/AppContext';
 import { fetchEvents, createEvent, deleteEvent, fetchTasks } from '@/lib/collaboration';
 import { Modal } from '@/components/ui/Modal';
-import { EmptyState, Spinner } from '@/components/ui';
+import { EmptyState, ErrorState, Spinner } from '@/components/ui';
 import { Plus, Calendar, Trash2, Clock, Flag, CheckSquare, Users } from 'lucide-react';
 import type { ProjectEvent, EventType, ProjectTask, ResearchProject } from '@/types';
 
@@ -46,22 +46,32 @@ export function ProjectCalendar({ project }: { project: ResearchProject }) {
   const [events, setEvents] = useState<ProjectEvent[]>([]);
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ title: '', description: '', event_date: '', event_type: 'deadline' as EventType });
 
   useEffect(() => {
+    let cancelled = false;
     async function load() {
       setLoading(true);
-      const [eventData, taskData] = await Promise.all([
-        fetchEvents(project.id),
-        fetchTasks(project.id),
-      ]);
-      setEvents(eventData);
-      setTasks(taskData);
-      setLoading(false);
+      setError(null);
+      try {
+        const [eventData, taskData] = await Promise.all([
+          fetchEvents(project.id),
+          fetchTasks(project.id),
+        ]);
+        if (cancelled) return;
+        setEvents(eventData);
+        setTasks(taskData);
+      } catch {
+        if (!cancelled) setError(t('error'));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
     load();
-  }, [project.id]);
+    return () => { cancelled = true; };
+  }, [project.id, t]);
 
   const handleCreate = async () => {
     if (!form.title.trim() || !form.event_date || !user) return;
@@ -105,6 +115,7 @@ export function ProjectCalendar({ project }: { project: ResearchProject }) {
   const past = allEvents.filter((e) => !isUpcoming(e.event_date)).reverse();
 
   if (loading) return <div className="flex justify-center py-8"><Spinner /></div>;
+  if (error) return <ErrorState message={error} />;
 
   return (
     <div className="animate-fade-in">

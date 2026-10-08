@@ -5,7 +5,7 @@ import {
   fetchMembers, inviteMember, updateMemberRole, removeMember, leaveProject,
 } from '@/lib/collaboration';
 import { Modal } from '@/components/ui/Modal';
-import { EmptyState, Spinner } from '@/components/ui';
+import { EmptyState, ErrorState, Spinner } from '@/components/ui';
 import { UserPlus, Crown, Pencil, Eye, Trash2, LogOut, Mail } from 'lucide-react';
 import type { ProjectMember, ProjectRole, ResearchProject } from '@/types';
 
@@ -14,6 +14,7 @@ export function ProjectTeam({ project }: { project: ResearchProject }) {
   const { t } = useApp();
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showInvite, setShowInvite] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<ProjectRole>('editor');
@@ -22,16 +23,25 @@ export function ProjectTeam({ project }: { project: ResearchProject }) {
   const [myRole, setMyRole] = useState<ProjectRole | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     async function load() {
       setLoading(true);
-      const data = await fetchMembers(project.id);
-      setMembers(data);
-      const me = data.find((m) => m.user_id === user?.id);
-      setMyRole(me?.role || null);
-      setLoading(false);
+      setError(null);
+      try {
+        const data = await fetchMembers(project.id);
+        if (cancelled) return;
+        setMembers(data);
+        const me = data.find((m) => m.user_id === user?.id);
+        setMyRole(me?.role || null);
+      } catch {
+        if (!cancelled) setError(t('error'));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
     load();
-  }, [project.id, user?.id]);
+    return () => { cancelled = true; };
+  }, [project.id, user?.id, t]);
 
   const handleInvite = async () => {
     if (!inviteEmail.trim() || !user) return;
@@ -86,6 +96,7 @@ export function ProjectTeam({ project }: { project: ResearchProject }) {
   };
 
   if (loading) return <div className="flex justify-center py-8"><Spinner /></div>;
+  if (error) return <ErrorState message={error} />;
 
   return (
     <div className="animate-fade-in">

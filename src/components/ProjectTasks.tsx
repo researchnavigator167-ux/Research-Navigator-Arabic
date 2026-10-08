@@ -4,7 +4,7 @@ import { useApp } from '@/lib/AppContext';
 import { fetchTasks, createTask, updateTask, deleteTask } from '@/lib/collaboration';
 import { fetchMembers } from '@/lib/collaboration';
 import { Modal } from '@/components/ui/Modal';
-import { EmptyState, Spinner } from '@/components/ui';
+import { EmptyState, ErrorState, Spinner } from '@/components/ui';
 import { Plus, CheckCircle2, Circle, Clock, Trash2, X, Flag, Calendar } from 'lucide-react';
 import type { ProjectTask, TaskStatus, TaskPriority, ProjectMember, ResearchProject } from '@/types';
 
@@ -14,23 +14,33 @@ export function ProjectTasks({ project }: { project: ResearchProject }) {
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<ProjectTask | null>(null);
   const [form, setForm] = useState({ title: '', description: '', assigned_to: '', priority: 'medium' as TaskPriority, due_date: '' });
 
   useEffect(() => {
+    let cancelled = false;
     async function load() {
       setLoading(true);
-      const [taskData, memberData] = await Promise.all([
-        fetchTasks(project.id),
-        fetchMembers(project.id),
-      ]);
-      setTasks(taskData);
-      setMembers(memberData);
-      setLoading(false);
+      setError(null);
+      try {
+        const [taskData, memberData] = await Promise.all([
+          fetchTasks(project.id),
+          fetchMembers(project.id),
+        ]);
+        if (cancelled) return;
+        setTasks(taskData);
+        setMembers(memberData);
+      } catch {
+        if (!cancelled) setError(t('error'));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
     load();
-  }, [project.id]);
+    return () => { cancelled = true; };
+  }, [project.id, t]);
 
   const handleCreate = async () => {
     if (!form.title.trim() || !user) return;
@@ -111,6 +121,7 @@ export function ProjectTasks({ project }: { project: ResearchProject }) {
   };
 
   if (loading) return <div className="flex justify-center py-8"><Spinner /></div>;
+  if (error) return <ErrorState message={error} />;
 
   return (
     <div className="animate-fade-in">
