@@ -8,6 +8,7 @@ import { EmptyState, Spinner } from '@/components/ui';
 import {
   fetchClassMembers, fetchAssignments, fetchPublishedAssignments,
   fetchAnnouncements, createAnnouncement, deleteAnnouncement,
+  deleteAssignment as deleteAssignmentFn,
   getClassStats, leaveClass,
 } from '@/lib/classroom';
 import type { ClassRoom, ClassMember, Assignment, Announcement } from '@/types';
@@ -215,6 +216,8 @@ function AssignmentsTab({
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [userProjects, setUserProjects] = useState<{ id: string; title: string }[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<Assignment | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -237,6 +240,17 @@ function AssignmentsTab({
         .then(({ data }) => setUserProjects(data || []));
     }
   }, [isDoctor, user]);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const { error } = await deleteAssignmentFn(deleteTarget.id);
+    setDeleting(false);
+    if (!error) {
+      setAssignments((prev) => prev.filter((a) => a.id !== deleteTarget.id));
+    }
+    setDeleteTarget(null);
+  };
 
   return (
     <div className="space-y-3 animate-fade-in">
@@ -262,6 +276,7 @@ function AssignmentsTab({
             assignment={a}
             isDoctor={isDoctor}
             onClick={() => onOpenAssignment(a.id)}
+            onDelete={() => setDeleteTarget(a)}
           />
         ))
       )}
@@ -276,11 +291,23 @@ function AssignmentsTab({
           onCreated={() => { setShowCreate(false); load(); }}
         />
       )}
+
+      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title={t('deleteAssignment')} size="sm">
+        <div className="space-y-4">
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">{t('deleteAssignmentConfirm')}</p>
+          <div className="flex gap-3">
+            <button onClick={() => setDeleteTarget(null)} className="btn-ghost flex-1 text-sm">{t('cancel')}</button>
+            <button onClick={handleDelete} disabled={deleting} className="btn-primary flex-1 text-sm bg-error-600 hover:bg-error-700">
+              {deleting ? t('loading') : t('delete')}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
 
-function AssignmentCard({ assignment, isDoctor, onClick }: { assignment: Assignment; isDoctor: boolean; onClick: () => void }) {
+function AssignmentCard({ assignment, isDoctor, onClick, onDelete }: { assignment: Assignment; isDoctor: boolean; onClick: () => void; onDelete: () => void }) {
   const { t } = useApp();
   const typeIcons: Record<string, string> = {
     text: t('typeText'),
@@ -289,23 +316,33 @@ function AssignmentCard({ assignment, isDoctor, onClick }: { assignment: Assignm
   };
 
   return (
-    <div onClick={onClick} className="card cursor-pointer hover:shadow-md transition-all">
+    <div className="card cursor-pointer hover:shadow-md transition-all">
       <div className="flex items-start justify-between mb-2">
         <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex-1">{assignment.title}</h3>
-        <span className={`badge text-[10px] ${
-          assignment.is_published
-            ? 'bg-success-50 text-success-700 dark:bg-success-900/30 dark:text-success-400'
-            : 'bg-warning-50 text-warning-700 dark:bg-warning-900/30 dark:text-warning-400'
-        }`}>
-          {assignment.is_published ? t('assignmentPublished') : t('assignmentNotPublished')}
-        </span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className={`badge text-[10px] ${
+            assignment.is_published
+              ? 'bg-success-50 text-success-700 dark:bg-success-900/30 dark:text-success-400'
+              : 'bg-warning-50 text-warning-700 dark:bg-warning-900/30 dark:text-warning-400'
+          }`}>
+            {assignment.is_published ? t('assignmentPublished') : t('assignmentNotPublished')}
+          </span>
+          {isDoctor && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              className="text-neutral-300 hover:text-error-500 p-1 rounded-lg transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {assignment.description && (
         <p className="text-xs text-neutral-500 line-clamp-2 mb-2">{assignment.description}</p>
       )}
 
-      <div className="flex items-center gap-3 text-xs text-neutral-400">
+      <div onClick={onClick} className="mt-2 flex items-center gap-3 text-xs text-neutral-400">
         <span className="badge bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">{typeIcons[assignment.assignment_type]}</span>
         {assignment.due_date && (
           <span>{new Date(assignment.due_date).toLocaleDateString()}</span>
