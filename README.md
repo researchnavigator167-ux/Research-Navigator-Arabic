@@ -243,4 +243,4 @@ Upload this file to the Google Play Console at https://play.google.com/console
 
 ## License
 
-Private — Research Navigator
+Public — Research Navigator
