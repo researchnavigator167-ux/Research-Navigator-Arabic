@@ -11,26 +11,59 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
+async function getAuthenticatedUser(req: Request): Promise<string | null> {
+  const header = req.headers.get("Authorization");
+  if (!header?.startsWith("Bearer ")) return null;
+  const { data } = await supabase.auth.getUser(header.slice(7));
+  return data.user?.id ?? null;
+}
+
+async function canAccessProject(userId: string, projectId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("project_members")
+    .select("user_id")
+    .eq("project_id", projectId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  return Boolean(data);
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
+    const userId = await getAuthenticatedUser(req);
+    if (!userId) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { projectId } = await req.json();
-    if (!projectId) {
+    if (typeof projectId !== "string" || !projectId) {
       return new Response(JSON.stringify({ error: "Project ID is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { data: project } = await supabase
+    if (!(await canAccessProject(userId, projectId))) {
+      return new Response(JSON.stringify({ error: "Access denied" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: project, error: projectError } = await supabase
       .from("research_projects")
       .select("*")
       .eq("id", projectId)
-      .single();
+      .maybeSingle();
 
+    if (projectError) throw projectError;
     if (!project) {
       return new Response(JSON.stringify({ error: "Project not found" }), {
         status: 404,
@@ -107,12 +140,9 @@ Deno.serve(async (req: Request) => {
         .update({ content: brief })
         .eq("id", existingBrief.id);
     } else {
-      const userId = (await supabase.auth.getUser()).data.user?.id;
-      if (userId) {
-        await supabase
-          .from("research_briefs")
-          .insert({ project_id: projectId, user_id: userId, content: brief });
-      }
+      await supabase
+        .from("research_briefs")
+        .insert({ project_id: projectId, user_id: userId, content: brief });
     }
 
     return new Response(JSON.stringify({

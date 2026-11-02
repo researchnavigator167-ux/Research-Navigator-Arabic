@@ -2,8 +2,9 @@ import { supabase } from './supabase';
 import { supabaseUrl, supabaseAnonKey } from './env';
 
 async function callEdgeFunction<T>(name: string, body: unknown): Promise<T> {
-  const { data: sessionData } = await supabase.auth.getSession();
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
+  if (sessionError || !token) throw new Error('AUTH_REQUIRED');
 
   const url = `${supabaseUrl}/functions/v1/${name}`;
   const res = await fetch(url, {

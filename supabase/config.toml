@@ -25,3 +25,7 @@ entrypoint = "./functions/gap-discovery/index.ts"
 [functions.brief-generate]
 verify_jwt = true
 entrypoint = "./functions/brief-generate/index.ts"
+
+[functions.delete-account]
+verify_jwt = true
+entrypoint = "./functions/delete-account/index.ts"

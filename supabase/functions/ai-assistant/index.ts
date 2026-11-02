@@ -533,7 +533,24 @@ Deno.serve(async (req: Request) => {
     }
 
     const { message, projectId, conversationId } = await req.json();
-    if (!message) {
+    if (typeof message !== "string" || message.trim().length === 0 || message.length > 10000) {
+      return new Response(JSON.stringify({ error: "Message is invalid" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (projectId !== undefined && projectId !== null && typeof projectId !== "string") {
+      return new Response(JSON.stringify({ error: "Project ID is invalid" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (conversationId !== undefined && conversationId !== null && typeof conversationId !== "string") {
+      return new Response(JSON.stringify({ error: "Conversation ID is invalid" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
       return new Response(JSON.stringify({ error: "Message is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -546,6 +563,24 @@ Deno.serve(async (req: Request) => {
       if (!isMember) {
         return new Response(JSON.stringify({ error: "Access denied" }), {
           status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    if (conversationId) {
+      const { data: conversation, error: conversationError } = await supabase
+        .from("ai_conversations")
+        .select("id, user_id, project_id")
+        .eq("id", conversationId)
+        .eq("user_id", authUserId)
+        .maybeSingle();
+
+      if (conversationError) throw conversationError;
+      const expectedProjectId = projectId || null;
+      if (!conversation || conversation.project_id !== expectedProjectId) {
+        return new Response(JSON.stringify({ error: "Conversation not found" }), {
+          status: 404,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

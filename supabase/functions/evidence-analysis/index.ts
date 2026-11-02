@@ -11,26 +11,59 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
+async function getAuthenticatedUser(req: Request): Promise<string | null> {
+  const header = req.headers.get("Authorization");
+  if (!header?.startsWith("Bearer ")) return null;
+  const { data } = await supabase.auth.getUser(header.slice(7));
+  return data.user?.id ?? null;
+}
+
+async function canAccessProject(userId: string, projectId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("project_members")
+    .select("user_id")
+    .eq("project_id", projectId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  return Boolean(data);
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
+    const userId = await getAuthenticatedUser(req);
+    if (!userId) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { projectId } = await req.json();
-    if (!projectId) {
+    if (typeof projectId !== "string" || !projectId) {
       return new Response(JSON.stringify({ error: "Project ID is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { data: evidence } = await supabase
+    if (!(await canAccessProject(userId, projectId))) {
+      return new Response(JSON.stringify({ error: "Access denied" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: evidence, error: evidenceError } = await supabase
       .from("evidence_items")
       .select("claim, evidence_type, evidence_text, source:sources(title, authors, year)")
       .eq("project_id", projectId)
       .order("created_at", { ascending: false });
 
+    if (evidenceError) throw evidenceError;
     if (!evidence || evidence.length === 0) {
       return new Response(JSON.stringify({
         generalTrend: "لا توجد أدلة كافية لتحديد الاتجاه العام. يُنصح بإضافة ادعاءات وربطها بالمصادر.",

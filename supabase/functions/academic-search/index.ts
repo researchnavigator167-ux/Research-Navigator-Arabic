@@ -348,15 +348,20 @@ Deno.serve(async (req: Request) => {
 
   try {
     const { query, limit = 20, offset = 0, providers, expandedQueries } = await req.json();
-    if (!query || typeof query !== "string") {
+    if (typeof query !== "string" || query.trim().length === 0 || query.length > 500) {
       return new Response(JSON.stringify({ error: "Query is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const requestedProviders = providers || ["openalex", "crossref", "semantic_scholar", "pubmed", "core"];
-    const maxPerProvider = Math.ceil(limit * 1.8);
+    const safeLimit = Number.isFinite(Number(limit)) ? Math.min(50, Math.max(1, Math.floor(Number(limit)))) : 20;
+    const safeOffset = Number.isFinite(Number(offset)) ? Math.min(10000, Math.max(0, Math.floor(Number(offset)))) : 0;
+    const allowedProviders = new Set(["openalex", "crossref", "semantic_scholar", "pubmed", "core"]);
+    const requestedProviders = Array.isArray(providers)
+      ? providers.filter((provider): provider is string => typeof provider === "string" && allowedProviders.has(provider))
+      : ["openalex", "crossref", "semantic_scholar", "pubmed", "core"];
+    const maxPerProvider = Math.min(100, Math.ceil(safeLimit * 1.8));
 
     const providerMap: Record<string, (q: string, l: number, o: number) => Promise<NormalizedPaper[]>> = {
       openalex: searchOpenAlex,
@@ -369,15 +374,18 @@ Deno.serve(async (req: Request) => {
     const activeProviders = requestedProviders.filter((p: string) => providerMap[p]);
 
     // Search with original query + expanded queries if provided
-    const allQueries = expandedQueries && Array.isArray(expandedQueries) && expandedQueries.length > 0
-      ? [query, ...expandedQueries.slice(0, 3)]
+    const safeExpandedQueries = Array.isArray(expandedQueries)
+      ? expandedQueries.filter((item): item is string => typeof item === "string" && item.trim().length > 0 && item.length <= 500).slice(0, 3)
+      : [];
+    const allQueries = safeExpandedQueries.length > 0
+      ? [query, ...safeExpandedQueries]
       : [query];
 
     const searchPromises: Promise<NormalizedPaper[]>[] = [];
     for (const q of allQueries) {
       for (const p of activeProviders) {
         searchPromises.push(
-          providerMap[p](q, maxPerProvider, offset).catch(() => [])
+          providerMap[p](q, maxPerProvider, safeOffset).catch(() => [])
         );
       }
     }
@@ -470,7 +478,7 @@ Deno.serve(async (req: Request) => {
     // Sort by relevance score (composite)
     deduplicated.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
 
-    const finalResults = deduplicated.slice(offset, offset + limit);
+    const finalResults = deduplicated.slice(safeOffset, safeOffset + safeLimit);
 
     return new Response(JSON.stringify({
       results: finalResults,
@@ -478,9 +486,9 @@ Deno.serve(async (req: Request) => {
       providersQueried: activeProviders,
       providersFailed: failedProviders,
       partialFailure: failedProviders.length > 0 && failedProviders.length < activeProviders.length,
-      hasMore: deduplicated.length > offset + limit,
-      offset,
-      limit,
+      hasMore: deduplicated.length > safeOffset + safeLimit,
+      offset: safeOffset,
+      limit: safeLimit,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

@@ -11,41 +11,83 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
+async function getAuthenticatedUser(req: Request): Promise<string | null> {
+  const header = req.headers.get("Authorization");
+  if (!header?.startsWith("Bearer ")) return null;
+  const { data } = await supabase.auth.getUser(header.slice(7));
+  return data.user?.id ?? null;
+}
+
+async function canAccessProject(userId: string, projectId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("project_members")
+    .select("user_id")
+    .eq("project_id", projectId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  return Boolean(data);
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
+    const userId = await getAuthenticatedUser(req);
+    if (!userId) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { projectId } = await req.json();
-    if (!projectId) {
+    if (typeof projectId !== "string" || !projectId) {
       return new Response(JSON.stringify({ error: "Project ID is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { data: project } = await supabase
+    if (!(await canAccessProject(userId, projectId))) {
+      return new Response(JSON.stringify({ error: "Access denied" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: project, error: projectError } = await supabase
       .from("research_projects")
       .select("title, topic, field, research_question, keywords")
       .eq("id", projectId)
-      .single();
+      .maybeSingle();
+    if (projectError) throw projectError;
+    if (!project) {
+      return new Response(JSON.stringify({ error: "Project not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    const { data: sources } = await supabase
+    const { data: sources, error: sourcesError } = await supabase
       .from("sources")
       .select("title, authors, year, journal, abstract")
       .eq("project_id", projectId)
       .limit(20);
+    if (sourcesError) throw sourcesError;
 
-    const { data: evidence } = await supabase
+    const { data: evidence, error: evidenceError } = await supabase
       .from("evidence_items")
       .select("claim, evidence_type")
       .eq("project_id", projectId);
+    if (evidenceError) throw evidenceError;
 
-    const { data: existingGaps } = await supabase
+    const { data: existingGaps, error: gapsError } = await supabase
       .from("research_gaps")
       .select("*")
       .eq("project_id", projectId);
+    if (gapsError) throw gapsError;
 
     const gaps: { gap_type: string; description: string; supporting_sources: string }[] = [];
 
@@ -120,11 +162,12 @@ Deno.serve(async (req: Request) => {
       const gapsWithProject = gapsToInsert.map((g) => ({
         ...g,
         project_id: projectId,
-        user_id: (await supabase.auth.getUser()).data.user?.id,
+        user_id: userId,
       })).filter((g) => g.user_id);
 
       if (gapsWithProject.length > 0) {
-        await supabase.from("research_gaps").insert(gapsWithProject);
+        const { error: insertError } = await supabase.from("research_gaps").insert(gapsWithProject);
+        if (insertError) throw insertError;
       }
     }
 

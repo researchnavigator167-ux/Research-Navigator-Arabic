@@ -10,10 +10,12 @@ interface AuthContextType {
   role: UserRole | null;
   displayName: string | null;
   roleLoading: boolean;
+  recoveryMode: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
+  updatePassword: (password: string) => Promise<{ error: string | null }>;
   deleteAccount: () => Promise<{ error: string | null }>;
   refreshRole: () => Promise<void>;
   setRole: (role: UserRole, displayName?: string) => Promise<{ error: string | null }>;
@@ -27,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRoleState] = useState<UserRole | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [roleLoading, setRoleLoading] = useState(true);
+  const [recoveryMode, setRecoveryMode] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -39,11 +42,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setRecoveryMode(event === 'PASSWORD_RECOVERY');
       setUser(session?.user ?? null);
       setLoading(false);
       if (session?.user) {
-        loadRole(session.user.id);
+        void (async () => {
+          await loadRole(session.user.id);
+        })();
       } else {
         setRoleState(null);
         setDisplayName(null);
@@ -96,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setRoleState(null);
     setDisplayName(null);
+    setRecoveryMode(false);
   };
 
   const resetPassword = async (email: string) => {
@@ -103,16 +110,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   };
 
+  const updatePassword = async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (!error) setRecoveryMode(false);
+    return { error: error?.message ?? null };
+  };
+
   const deleteAccount = async () => {
     if (!user) return { error: 'No user' };
-    const { error } = await supabase.auth.signOut();
-    return { error: error?.message ?? null };
+    const { error: functionError } = await supabase.functions.invoke('delete-account', {
+      body: {},
+    });
+    if (functionError) return { error: 'ACCOUNT_DELETION_FAILED' };
+
+    const { error: signOutError } = await supabase.auth.signOut();
+    return { error: signOutError?.message ?? null };
   };
 
   return (
     <AuthContext.Provider value={{
-      user, loading, role, displayName, roleLoading,
-      signIn, signUp, signOut, resetPassword, deleteAccount, refreshRole, setRole,
+      user, loading, role, displayName, roleLoading, recoveryMode,
+      signIn, signUp, signOut, resetPassword, updatePassword, deleteAccount, refreshRole, setRole,
     }}>
       {children}
     </AuthContext.Provider>

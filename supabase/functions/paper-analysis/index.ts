@@ -86,7 +86,7 @@ function detectSample(abstract: string): string {
   }
 
   const sampleKeywords = ["sample", "participants", "subjects", "patients", "students", "عينة", "مشاركين", "مبحوثين", "طلاب"];
-  const found = extractSentence(abstract, sampleKeywords);
+  const found = extractSentence(normalizedAbstract, sampleKeywords);
   return found || "لم يتم تحديد العينة بوضوح من الملخص المتاح";
 }
 
@@ -117,13 +117,13 @@ function detectResults(abstract: string): string {
     "result", "finding", "showed", "found", "demonstrated", "significant", "p<", "p =", "p=", "effect",
     "نتيجة", "نتائج", "أظهرت", "وجدت", "تبين", "دلالة", "معنوي", "فرق دال",
   ];
-  const found = extractMultipleSentences(abstract, keywords, 3);
+  const found = extractMultipleSentences(normalizedAbstract, keywords, 3);
   if (found) return found;
 
   // Try to find statistical significance mentions
   const statsMatch = abstract.match(/(?:p\s*[<=>]\s*0?\.\d+|p\s*<\s*0\.0\d+|significantly|دالة إحصائيا)/i);
   if (statsMatch) {
-    const sentence = extractSentence(abstract, [statsMatch[0]]);
+    const sentence = extractSentence(normalizedAbstract, [statsMatch[0]]);
     return sentence || `تم العثور على إشارة لدلالة إحصائية: ${statsMatch[0]}`;
   }
 
@@ -135,7 +135,7 @@ function detectLimitations(abstract: string): string {
     "limitation", "however", "but", "constraint", "small sample", "cross-sectional", "self-report", "self-report",
     "قيد", "قيود", "لكن", "محذور", "عيب", "تقرير ذاتي",
   ];
-  const found = extractMultipleSentences(abstract, keywords, 2);
+  const found = extractMultipleSentences(normalizedAbstract, keywords, 2);
   return found || "لم يتم ذكر القيود في الملخص. قد تكون موجودة في النص الكامل";
 }
 
@@ -174,15 +174,16 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const hasAbstract = abstract && abstract.length > 50;
-    const evidenceLevel: "full_text" | "abstract_only" = hasAbstract ? "abstract_only" : "abstract_only";
+    const normalizedAbstract = typeof abstract === "string" ? abstract.trim() : "";
+    const hasAbstract = normalizedAbstract.length > 50;
+    const evidenceLevel: "full_text" | "abstract_only" = "abstract_only";
 
     const analysis: AnalysisResult = {
       objective: hasAbstract
         ? (() => {
             const enKw = ["aim", "objective", "purpose", "goal", "this study", "this research", "we examine", "we investigate", "investigate", "explore"];
             const arKw = ["هدف", "تهدف", "يهدف", "الغرض", "هدفت", "نهدف", "استهدف"];
-            return extractSentence(abstract, [...enKw, ...arKw]) || `بناءً على عنوان الدراسة، يبدو أن الهدف مرتبط بمجال: ${title.substring(0, 200)}`;
+            return extractSentence(normalizedAbstract, [...enKw, ...arKw]) || `بناءً على عنوان الدراسة، يبدو أن الهدف مرتبط بمجال: ${title.substring(0, 200)}`;
           })()
         : "غير متوفر - لا يوجد ملخص كافٍ للتحليل",
 
@@ -190,7 +191,7 @@ Deno.serve(async (req: Request) => {
         ? (() => {
             const kw = ["question", "whether", "how does", "what is", "what are", "investigate", "examine", "test"];
             const arKw = ["سؤال", "ما العلاقة", "ما تأثير", "هل", "كيف", "فحص", "اختبار"];
-            return extractSentence(abstract, [...kw, ...arKw]) || "لم يتم العثور على سؤال بحثي صريح في الملخص المتاح";
+            return extractSentence(normalizedAbstract, [...kw, ...arKw]) || "لم يتم العثور على سؤال بحثي صريح في الملخص المتاح";
           })()
         : "غير متوفر",
 
@@ -198,48 +199,48 @@ Deno.serve(async (req: Request) => {
         ? (() => {
             const kw = ["hypothesis", "hypotheses", "expect", "predict", "assume", "propose"];
             const arKw = ["فرضية", "فرضيات", "نفترض", "توقع", "نطرح"];
-            return extractSentence(abstract, [...kw, ...arKw]) || "لم يتم العثور على فرضيات صريحة في الملخص المتاح";
+            return extractSentence(normalizedAbstract, [...kw, ...arKw]) || "لم يتم العثور على فرضيات صريحة في الملخص المتاح";
           })()
         : "غير متوفر",
 
       methodology: hasAbstract
-        ? detectMethodology(abstract, title)
+        ? detectMethodology(normalizedAbstract, title)
         : "غير متوفر",
 
       sample: hasAbstract
-        ? detectSample(abstract)
+        ? detectSample(normalizedAbstract)
         : "غير متوفر",
 
       instruments: hasAbstract
         ? (() => {
             const kw = ["questionnaire", "scale", "instrument", "measure", "tool", "test", "survey", "interview", "inventory", "checklist"];
             const arKw = ["استبانة", "مقياس", "أداة", "أدوات", "اختبار", "مقابلة", "قائمة"];
-            return extractSentence(abstract, [...kw, ...arKw]) || "لم يتم تحديد الأدوات بوضوح من الملخص المتاح";
+            return extractSentence(normalizedAbstract, [...kw, ...arKw]) || "لم يتم تحديد الأدوات بوضوح من الملخص المتاح";
           })()
         : "غير متوفر",
 
       variables: hasAbstract
-        ? detectVariables(abstract, title)
+        ? detectVariables(normalizedAbstract, title)
         : "غير متوفر",
 
       results: hasAbstract
-        ? detectResults(abstract)
+        ? detectResults(normalizedAbstract)
         : "غير متوفر",
 
       limitations: hasAbstract
-        ? detectLimitations(abstract)
+        ? detectLimitations(normalizedAbstract)
         : "غير متوفر",
 
       recommendations: hasAbstract
         ? (() => {
             const kw = ["recommend", "suggest", "should", "future research", "implication"];
             const arKw = ["توصية", "توصيات", "نوصي", "نقترح", "بحوث مستقبلية", "تطبيقات"];
-            return extractSentence(abstract, [...kw, ...arKw]) || "لم يتم العثور على توصيات صريحة في الملخص. يُنصح بمراجعة النص الكامل";
+            return extractSentence(normalizedAbstract, [...kw, ...arKw]) || "لم يتم العثور على توصيات صريحة في الملخص. يُنصح بمراجعة النص الكامل";
           })()
         : "غير متوفر",
 
       relationToUserTopic: researchTopic
-        ? extractRelation(abstract || "", title, researchTopic)
+        ? extractRelation(normalizedAbstract, title, researchTopic)
         : "لم يتم تحديد موضوع بحثك",
 
       evidenceLevel,

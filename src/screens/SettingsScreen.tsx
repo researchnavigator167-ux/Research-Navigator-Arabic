@@ -16,9 +16,14 @@ export function SettingsScreen() {
   const { theme, setTheme } = useTheme();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLanguage, setShowLanguage] = useState(false);
+  const [deleteError, setDeleteError] = useState(false);
 
   const handleDelete = async () => {
-    await deleteAccount();
+    const result = await deleteAccount();
+    if (result.error) {
+      setDeleteError(true);
+      return;
+    }
     setShowDeleteConfirm(false);
   };
 
@@ -147,8 +152,11 @@ export function SettingsScreen() {
             <Trash2 className="w-5 h-5 text-error-500 flex-shrink-0 mt-0.5" />
             <p className="text-sm text-error-700 dark:text-error-400">{t('deleteAccountConfirm')}</p>
           </div>
+          {deleteError && (
+            <p className="text-sm text-error-700 dark:text-error-400">{t('deleteAccountError')}</p>
+          )}
           <div className="flex gap-3">
-            <button onClick={() => setShowDeleteConfirm(false)} className="btn-ghost flex-1 text-sm">
+            <button onClick={() => { setShowDeleteConfirm(false); setDeleteError(false); }} className="btn-ghost flex-1 text-sm">
               {t('cancel')}
             </button>
             <button onClick={handleDelete} className="btn-primary flex-1 text-sm bg-error-600 hover:bg-error-700">

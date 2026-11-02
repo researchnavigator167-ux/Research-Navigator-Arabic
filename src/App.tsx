@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { AppProvider } from '@/lib/AppContext';
 import { ThemeProvider } from '@/lib/ThemeContext';
 import { AuthScreen } from '@/screens/AuthScreen';
+import { PasswordRecoveryScreen } from '@/screens/PasswordRecoveryScreen';
 import { Onboarding } from '@/screens/Onboarding';
 import { HomeScreen } from '@/screens/HomeScreen';
 import { ResearchList } from '@/screens/ResearchList';
@@ -25,7 +26,7 @@ type Screen =
   | { name: 'assignmentDetail'; assignmentId: string; classId: string };
 
 function AppContent() {
-  const { user, loading, roleLoading, role } = useAuth();
+  const { user, loading, roleLoading, recoveryMode, role } = useAuth();
   const [onboarded, setOnboarded] = useState<boolean>(() => {
     return localStorage.getItem('rn-onboarded') === 'true';
   });
@@ -73,6 +74,10 @@ function AppContent() {
 
   if (!user) {
     return <AuthScreen />;
+  }
+
+  if (recoveryMode) {
+    return <PasswordRecoveryScreen />;
   }
 
   if (!onboarded) {
