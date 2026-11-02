@@ -1,0 +1,37 @@
+{
+  "projectId": "71803007",
+  "functions": {
+    "academic-search": {
+      "hasChanged": false,
+      "hash": "01eedee6f4b903d8e354bcd97eea0346b7044cfe6d87cc604f8ac0a7d6e78075"
+    },
+    "ai-assistant": {
+      "hasChanged": false,
+      "hash": "ffcb6f0a8c9d746334ee75ac0779d1b24d7b1975adf08fa44d1aeb4cb82065c0"
+    },
+    "brief-generate": {
+      "hasChanged": false,
+      "hash": "c0a02220476e783089bdbc1f2b1fda67f74e4a99a5c99a7ccad412633fb57c93"
+    },
+    "delete-account": {
+      "hasChanged": false,
+      "hash": "d01b68810342009fc10f0eed0637af9eba9f8e3e875825f84a4cf64137fc95af"
+    },
+    "evidence-analysis": {
+      "hasChanged": false,
+      "hash": "2d1d00ccf4e2a081d4431711d9ca69db3826fe091ecd3f53b295e8baabb38913"
+    },
+    "gap-discovery": {
+      "hasChanged": false,
+      "hash": "2dfdff0382c475a20c5acb5510fe2959ba8df9b7489a3706cc1f7826f138c85c"
+    },
+    "paper-analysis": {
+      "hasChanged": false,
+      "hash": "25c66f0a56c67a85e9d6e17c194b24c3bb59f54d4f112f5ffcdbb5c3f671a4b7"
+    },
+    "query-expand": {
+      "hasChanged": false,
+      "hash": "4029a133bfbcf78ebeb07b380df3b3be41e12199312667642725d58ea02476c5"
+    }
+  }
+}

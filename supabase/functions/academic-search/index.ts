@@ -357,10 +357,12 @@ Deno.serve(async (req: Request) => {
 
     const safeLimit = Number.isFinite(Number(limit)) ? Math.min(50, Math.max(1, Math.floor(Number(limit)))) : 20;
     const safeOffset = Number.isFinite(Number(offset)) ? Math.min(10000, Math.max(0, Math.floor(Number(offset)))) : 0;
+    const coreApiKey = Deno.env.get("CORE_API_KEY");
     const allowedProviders = new Set(["openalex", "crossref", "semantic_scholar", "pubmed", "core"]);
     const requestedProviders = Array.isArray(providers)
       ? providers.filter((provider): provider is string => typeof provider === "string" && allowedProviders.has(provider))
-      : ["openalex", "crossref", "semantic_scholar", "pubmed", "core"];
+      : ["openalex", "crossref", "semantic_scholar", "pubmed", ...(coreApiKey ? ["core"] : [])];
+    const availableProviders = new Set(coreApiKey ? allowedProviders : ["openalex", "crossref", "semantic_scholar", "pubmed"]);
     const maxPerProvider = Math.min(100, Math.ceil(safeLimit * 1.8));
 
     const providerMap: Record<string, (q: string, l: number, o: number) => Promise<NormalizedPaper[]>> = {
@@ -371,7 +373,7 @@ Deno.serve(async (req: Request) => {
       core: searchCORE,
     };
 
-    const activeProviders = requestedProviders.filter((p: string) => providerMap[p]);
+    const activeProviders = requestedProviders.filter((p: string) => providerMap[p] && availableProviders.has(p));
 
     // Search with original query + expanded queries if provided
     const safeExpandedQueries = Array.isArray(expandedQueries)
