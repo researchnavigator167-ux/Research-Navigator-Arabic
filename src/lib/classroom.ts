@@ -363,6 +363,25 @@ export async function updateAssignment(
 }
 
 export async function deleteAssignment(assignmentId: string): Promise<{ error: string | null }> {
+  const { data: submissions, error: submissionsError } = await supabase
+    .from('assignment_submissions')
+    .select('file_path')
+    .eq('assignment_id', assignmentId)
+    .not('file_path', 'is', null);
+
+  if (submissionsError) return { error: submissionsError.message };
+
+  const filePaths = (submissions || [])
+    .map((submission) => submission.file_path)
+    .filter((filePath): filePath is string => Boolean(filePath));
+
+  if (filePaths.length > 0) {
+    const { error: storageError } = await supabase.storage
+      .from('project-files')
+      .remove(filePaths);
+    if (storageError) return { error: storageError.message };
+  }
+
   const { error } = await supabase
     .from('assignments')
     .delete()
@@ -715,23 +734,43 @@ const SUBMISSION_FILE_TYPES = [
   'text/plain',
   'image/jpeg',
   'image/png',
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+  'audio/mpeg',
+  'audio/mp4',
+  'audio/wav',
+  'audio/ogg',
+  'audio/webm',
 ];
 
-const MAX_SUBMISSION_SIZE = 25 * 1024 * 1024;
+const MAX_SUBMISSION_SIZE = 250 * 1024 * 1024;
 
 export async function uploadSubmissionFile(
   classId: string,
   studentId: string,
   file: File,
+  assignmentType: AssignmentType = 'file',
 ): Promise<{ filePath: string | null; error: string | null }> {
-  if (!SUBMISSION_FILE_TYPES.includes(file.type)) {
+  const isVideo = file.type.startsWith('video/');
+  const isAudio = file.type.startsWith('audio/');
+  const typeMatchesAssignment = assignmentType === 'video'
+    ? isVideo
+    : assignmentType === 'audio'
+      ? isAudio
+      : assignmentType === 'file'
+        ? !isVideo && !isAudio
+        : true;
+
+  if (!SUBMISSION_FILE_TYPES.includes(file.type) || !typeMatchesAssignment) {
     return { filePath: null, error: 'supportedFormats' };
   }
   if (file.size > MAX_SUBMISSION_SIZE) {
     return { filePath: null, error: 'fileUploadError' };
   }
 
-  const filePath = `class-submissions/${classId}/${studentId}/${Date.now()}-${file.name}`;
+  const safeFileName = file.name.replace(/[^\p{L}\p{N}._-]+/gu, '_');
+  const filePath = `class-submissions/${classId}/${studentId}/${Date.now()}-${safeFileName}`;
 
   const { error: uploadErr } = await supabase.storage
     .from('project-files')

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useApp } from '@/lib/AppContext';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { ArrowRight, Users, ClipboardList, Bell, ChartBar as BarChart3, Plus, Copy, Check, Trash2, Loader as Loader2, BookOpen, CircleUser as UserCircle } from 'lucide-react';
+import { ArrowRight, Users, ClipboardList, Bell, ChartBar as BarChart3, Plus, Copy, Check, Trash2, Loader as Loader2, BookOpen } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState, Spinner } from '@/components/ui';
 import {
@@ -23,7 +23,7 @@ type Tab = 'overview' | 'students' | 'assignments' | 'announcements' | 'progress
 
 export function ClassDetailScreen({ classRoom, onBack, onOpenAssignment }: ClassDetailScreenProps) {
   const { t, isRTL } = useApp();
-  const { user, role } = useAuth();
+  const { user } = useAuth();
   const [tab, setTab] = useState<Tab>('overview');
   const [copied, setCopied] = useState(false);
   const [leaveConfirm, setLeaveConfirm] = useState(false);
@@ -110,7 +110,7 @@ export function ClassDetailScreen({ classRoom, onBack, onOpenAssignment }: Class
             onOpenAssignment={onOpenAssignment}
           />
         )}
-        {tab === 'students' && <StudentsTab classRoom={classRoom} isDoctor={isDoctor} />}
+        {tab === 'students' && <StudentsTab classRoom={classRoom} />} 
         {tab === 'announcements' && (
           <AnnouncementsTab classRoom={classRoom} isDoctor={isDoctor} />
         )}
@@ -218,6 +218,7 @@ function AssignmentsTab({
   const [userProjects, setUserProjects] = useState<{ id: string; title: string }[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<Assignment | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -244,11 +245,16 @@ function AssignmentsTab({
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
+    setDeleteError(null);
     const { error } = await deleteAssignmentFn(deleteTarget.id);
     setDeleting(false);
-    if (!error) {
-      setAssignments((prev) => prev.filter((a) => a.id !== deleteTarget.id));
+    if (error) {
+      setDeleteError(error);
+      setDeleting(false);
+      return;
     }
+    setAssignments((prev) => prev.filter((a) => a.id !== deleteTarget.id));
+    setDeleting(false);
     setDeleteTarget(null);
   };
 
@@ -295,6 +301,11 @@ function AssignmentsTab({
       <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title={t('deleteAssignment')} size="sm">
         <div className="space-y-4">
           <p className="text-sm text-neutral-600 dark:text-neutral-400">{t('deleteAssignmentConfirm')}</p>
+          {deleteError && (
+            <p className="rounded-xl bg-error-50 dark:bg-error-900/20 px-3 py-2 text-sm text-error-700 dark:text-error-400">
+              {deleteError}
+            </p>
+          )}
           <div className="flex gap-3">
             <button onClick={() => setDeleteTarget(null)} className="btn-ghost flex-1 text-sm">{t('cancel')}</button>
             <button onClick={handleDelete} disabled={deleting} className="btn-primary flex-1 text-sm bg-error-600 hover:bg-error-700">
@@ -312,6 +323,8 @@ function AssignmentCard({ assignment, isDoctor, onClick, onDelete }: { assignmen
   const typeIcons: Record<string, string> = {
     text: t('typeText'),
     file: t('typeFile'),
+    video: t('typeVideo'),
+    audio: t('typeAudio'),
     research_project: t('typeResearchProject'),
   };
 
@@ -370,7 +383,7 @@ function CreateAssignmentModal({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [instructions, setInstructions] = useState('');
-  const [type, setType] = useState<'text' | 'file' | 'research_project'>('text');
+  const [type, setType] = useState<'text' | 'file' | 'video' | 'audio' | 'research_project'>('text');
   const [maxGrade, setMaxGrade] = useState('100');
   const [dueDate, setDueDate] = useState('');
   const [linkedProjectId, setLinkedProjectId] = useState('');
@@ -423,8 +436,8 @@ function CreateAssignmentModal({
 
         <div>
           <label className="block text-xs font-bold text-neutral-400 uppercase mb-2">{t('assignmentType')}</label>
-          <div className="grid grid-cols-3 gap-2">
-            {(['text', 'file', 'research_project'] as const).map((ty) => (
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            {(['text', 'file', 'video', 'audio', 'research_project'] as const).map((ty) => (
               <button
                 key={ty}
                 onClick={() => setType(ty)}
@@ -434,7 +447,7 @@ function CreateAssignmentModal({
                     : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
                 }`}
               >
-                {ty === 'text' ? t('typeText') : ty === 'file' ? t('typeFile') : t('typeResearchProject')}
+                {ty === 'text' ? t('typeText') : ty === 'file' ? t('typeFile') : ty === 'video' ? t('typeVideo') : ty === 'audio' ? t('typeAudio') : t('typeResearchProject')}
               </button>
             ))}
           </div>
@@ -493,7 +506,7 @@ function CreateAssignmentModal({
 // ============================================================================
 // Students Tab
 // ============================================================================
-function StudentsTab({ classRoom, isDoctor }: { classRoom: ClassRoom; isDoctor: boolean }) {
+function StudentsTab({ classRoom }: { classRoom: ClassRoom }) {
   const { t } = useApp();
   const [members, setMembers] = useState<ClassMember[]>([]);
   const [loading, setLoading] = useState(true);

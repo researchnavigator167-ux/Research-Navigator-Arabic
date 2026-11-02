@@ -227,7 +227,7 @@ export interface UserRoleInfo {
   created_at: string;
 }
 
-export type AssignmentType = 'text' | 'file' | 'research_project';
+export type AssignmentType = 'text' | 'file' | 'video' | 'audio' | 'research_project';
 export type SubmissionStatus = 'submitted' | 'reviewed' | 'graded' | 'returned';
 export type FeedbackType = 'comment' | 'correction' | 'praise' | 'suggestion';
 

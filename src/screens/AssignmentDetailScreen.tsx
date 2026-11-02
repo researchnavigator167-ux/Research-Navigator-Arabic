@@ -2,14 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { useApp } from '@/lib/AppContext';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { ArrowRight, ClipboardList, FileText, BookOpen, Loader as Loader2, Upload, Send, MessageSquare, Trash2, Check, CircleAlert as AlertCircle } from 'lucide-react';
+import { ArrowRight, ClipboardList, FileText, BookOpen, Loader as Loader2, Upload, Send, MessageSquare, Trash2, Check, CircleAlert as AlertCircle, Film, Headphones } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState, Spinner } from '@/components/ui';
 import {
   fetchAssignmentById, fetchSubmissionsForAssignment,
   fetchStudentSubmission, submitAssignment,
   gradeSubmission, fetchFeedback, addFeedback, deleteFeedback,
-  uploadSubmissionFile, publishAssignment,
+  uploadSubmissionFile, publishAssignment, getSubmissionFileUrl,
 } from '@/lib/classroom';
 import type {
   Assignment, AssignmentSubmission, AssignmentFeedback,
@@ -24,7 +24,7 @@ interface AssignmentDetailScreenProps {
 
 export function AssignmentDetailScreen({ assignmentId, classId, onBack }: AssignmentDetailScreenProps) {
   const { t, isRTL } = useApp();
-  const { user, role } = useAuth();
+  const { role } = useAuth();
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [loading, setLoading] = useState(true);
   const ArrowIcon = ArrowRight;
@@ -73,6 +73,8 @@ export function AssignmentDetailScreen({ assignmentId, classId, onBack }: Assign
   const typeIcons: Record<string, React.ReactNode> = {
     text: <FileText className="w-4 h-4" />,
     file: <Upload className="w-4 h-4" />,
+    video: <Film className="w-4 h-4" />,
+    audio: <Headphones className="w-4 h-4" />,
     research_project: <BookOpen className="w-4 h-4" />,
   };
 
@@ -89,7 +91,7 @@ export function AssignmentDetailScreen({ assignmentId, classId, onBack }: Assign
             <div className="flex items-center gap-2 mt-1">
               <span className="flex items-center gap-1 text-xs text-primary-700 dark:text-primary-400">
                 {typeIcons[assignment.assignment_type]}
-                {assignment.assignment_type === 'text' ? t('typeText') : assignment.assignment_type === 'file' ? t('typeFile') : t('typeResearchProject')}
+                {assignment.assignment_type === 'text' ? t('typeText') : assignment.assignment_type === 'file' ? t('typeFile') : assignment.assignment_type === 'video' ? t('typeVideo') : assignment.assignment_type === 'audio' ? t('typeAudio') : t('typeResearchProject')}
               </span>
               <span className="text-xs text-neutral-400">·</span>
               <span className="text-xs text-neutral-400">{t('maxGrade')}: {assignment.max_grade}</span>
@@ -206,6 +208,25 @@ function DoctorView({ assignment, classId }: { assignment: Assignment; classId: 
   );
 }
 
+function SubmissionMedia({ submission }: { submission: AssignmentSubmission }) {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!submission.file_path) return;
+    getSubmissionFileUrl(submission.file_path).then(setUrl);
+  }, [submission.file_path]);
+
+  if (!submission.file_path) return null;
+  if (!url) return <p className="text-xs text-neutral-400 mt-2">{submission.file_name}</p>;
+  if (submission.file_type?.startsWith('video/')) {
+    return <video className="w-full max-h-64 rounded-xl mt-2 bg-black" src={url} controls preload="metadata" />;
+  }
+  if (submission.file_type?.startsWith('audio/')) {
+    return <audio className="w-full mt-2" src={url} controls preload="metadata" />;
+  }
+  return <a href={url} target="_blank" rel="noreferrer" className="text-xs text-primary-700 dark:text-primary-400 underline mt-2 inline-block">{submission.file_name}</a>;
+}
+
 function SubmissionCard({ submission, onClick }: { submission: AssignmentSubmission; onClick: () => void }) {
   const { t } = useApp();
   const statusColors: Record<string, string> = {
@@ -240,6 +261,7 @@ function SubmissionCard({ submission, onClick }: { submission: AssignmentSubmiss
           {submission.file_name}
         </p>
       )}
+      <SubmissionMedia submission={submission} />
       <div className="flex items-center justify-between mt-2">
         <span className="text-[10px] text-neutral-400">{new Date(submission.created_at).toLocaleString()}</span>
         {submission.grade !== null && (
@@ -334,6 +356,7 @@ function ReviewModal({
               {submission.file_name}
             </div>
           )}
+          <SubmissionMedia submission={submission} />
           {submission.linked_project_id && (
             <div className="mt-2">
               <span className="badge bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400">
@@ -528,6 +551,7 @@ function StudentView({ assignment, classId }: { assignment: Assignment; classId:
               {submission.file_name}
             </p>
           )}
+          <SubmissionMedia submission={submission} />
           {submission.linked_project_id && (
             <span className="badge bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400 mt-2">
               <BookOpen className="w-3 h-3 inline-block me-1" />
@@ -628,7 +652,7 @@ function SubmitModal({
     if (!file) return;
     setUploading(true);
     setError(null);
-    const { filePath: path, error: uploadErr } = await uploadSubmissionFile(classId, studentId, file);
+    const { filePath: path, error: uploadErr } = await uploadSubmissionFile(classId, studentId, file, assignment.assignment_type);
     if (uploadErr) {
       setError(uploadErr === 'supportedFormats' ? t('supportedFormats') : t('fileUploadError'));
     } else if (path) {
@@ -642,7 +666,7 @@ function SubmitModal({
 
   const handleSubmit = async () => {
     if (assignment.assignment_type === 'text' && !content.trim()) return;
-    if (assignment.assignment_type === 'file' && !filePath) return;
+    if (['file', 'video', 'audio'].includes(assignment.assignment_type) && !filePath) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -676,11 +700,16 @@ function SubmitModal({
           </div>
         )}
 
-        {assignment.assignment_type === 'file' && (
+        {['file', 'video', 'audio'].includes(assignment.assignment_type) && (
           <div>
             <label className="block text-xs font-bold text-neutral-400 uppercase mb-2">{t('uploadSubmissionFile')} *</label>
             <label className="block border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-xl p-6 text-center cursor-pointer hover:border-primary-400 transition-colors">
-              <input type="file" onChange={handleFile} className="hidden" accept=".pdf,.docx,.pptx,.xlsx,.doc,.xls,.ppt,.txt,.jpg,.png" />
+              <input
+                type="file"
+                onChange={handleFile}
+                className="hidden"
+                accept={assignment.assignment_type === 'video' ? 'video/*' : assignment.assignment_type === 'audio' ? 'audio/*' : '.pdf,.docx,.pptx,.xlsx,.doc,.xls,.ppt,.txt,.jpg,.png'}
+              />
               {uploading ? (
                 <Loader2 className="w-6 h-6 text-primary-700 animate-spin mx-auto mb-2" />
               ) : (
@@ -738,7 +767,7 @@ function SubmitModal({
           <button onClick={onClose} className="btn-ghost flex-1 text-sm">{t('cancel')}</button>
           <button
             onClick={handleSubmit}
-            disabled={submitting || (assignment.assignment_type === 'text' && !content.trim()) || (assignment.assignment_type === 'file' && !filePath)}
+            disabled={submitting || (assignment.assignment_type === 'text' && !content.trim()) || (['file', 'video', 'audio'].includes(assignment.assignment_type) && !filePath)}
             className="btn-primary flex-1 text-sm"
           >
             {submitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t('submitAssignment')}
