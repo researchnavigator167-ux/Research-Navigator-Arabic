@@ -422,19 +422,26 @@ function Step3Search({
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [hasMore, setHasMore] = useState(false);
+  const [nextOffset, setNextOffset] = useState(0);
 
-  const handleSearch = useCallback(async () => {
+  const handleSearch = useCallback(async (append = false) => {
     if (!query.trim()) return;
+    if (!append) setNextOffset(0);
     setLoading(true);
     setSearched(true);
     try {
-      const data = await callEdgeFunction<{ results: SearchResult[] }>('academic-search', {
+      const data = await callEdgeFunction<{ results: SearchResult[]; hasMore: boolean }>('academic-search', {
         query,
         limit: 15,
+        offset: append ? nextOffset : 0,
       });
-      setResults(data.results || []);
+      setResults((previous) => append ? [...previous, ...(data.results || [])] : (data.results || []));
+      setHasMore(Boolean(data.hasMore));
+      setNextOffset((append ? nextOffset : 0) + (data.results || []).length);
     } catch {
-      setResults([]);
+      if (!append) setResults([]);
+      setHasMore(false);
     } finally {
       setLoading(false);
     }
@@ -506,7 +513,7 @@ function Step3Search({
 
       <p className="text-xs text-neutral-500">{t('setupSearchHint')}</p>
 
-      <button onClick={handleSearch} disabled={loading || !query.trim()} className="btn-primary w-full">
+      <button onClick={() => handleSearch()} disabled={loading || !query.trim()} className="btn-primary w-full">
         {loading ? (
           <><Loader2 className="w-4 h-4 animate-spin" /> {t('searching')}</>
         ) : (
@@ -538,8 +545,8 @@ function Step3Search({
       {!loading && results.length > 0 && (
         <div className="space-y-3">
           <p className="text-xs text-neutral-500">{t('searchResults')} ({results.length})</p>
-          {results.map((result, i) => (
-            <div key={i} className="card">
+          {results.map((result) => (
+            <div key={`${result.doi || result.providerIds?.[0]?.id || result.title}`} className="card">
               <h3 className="text-sm font-bold text-neutral-900 dark:text-white line-clamp-2 mb-1.5">{result.title}</h3>
               <div className="flex items-center gap-2 text-xs text-neutral-500 mb-2 flex-wrap">
                 {result.year && <span>{result.year}</span>}
@@ -574,6 +581,7 @@ function Step3Search({
               </div>
             </div>
           ))}
+          {hasMore && <button onClick={() => handleSearch(true)} disabled={loading} className="btn-secondary w-full">{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null} تحميل المزيد</button>}
         </div>
       )}
 

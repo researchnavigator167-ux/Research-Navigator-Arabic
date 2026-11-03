@@ -213,6 +213,9 @@ export interface SearchResult {
   citationCount: number | null;
   keywords: string[];
   providers: string[];
+  relevanceScore?: number;
+  relevanceLevel?: 'high' | 'medium' | 'low';
+  relevanceReason?: string;
 }
 
 // ============================================================================

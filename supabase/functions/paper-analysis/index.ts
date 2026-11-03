@@ -70,6 +70,7 @@ function detectMethodology(abstract: string, title: string): string {
 }
 
 function detectSample(abstract: string): string {
+  const normalizedAbstract = abstract.trim();
   const patterns: RegExp[] = [
     /n\s*=\s*(\d+)/i,
     /(\d{2,6})\s*(?:participants|subjects|patients|students|individuals|respondents)/i,
@@ -113,6 +114,7 @@ function detectVariables(abstract: string, title: string): string {
 }
 
 function detectResults(abstract: string): string {
+  const normalizedAbstract = abstract.trim();
   const keywords = [
     "result", "finding", "showed", "found", "demonstrated", "significant", "p<", "p =", "p=", "effect",
     "نتيجة", "نتائج", "أظهرت", "وجدت", "تبين", "دلالة", "معنوي", "فرق دال",
@@ -131,7 +133,7 @@ function detectResults(abstract: string): string {
 }
 
 function detectLimitations(abstract: string): string {
-  const keywords = [
+  const normalizedAbstract = abstract.trim();  const keywords = [
     "limitation", "however", "but", "constraint", "small sample", "cross-sectional", "self-report", "self-report",
     "قيد", "قيود", "لكن", "محذور", "عيب", "تقرير ذاتي",
   ];

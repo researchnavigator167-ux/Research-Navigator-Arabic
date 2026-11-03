@@ -3,7 +3,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { useApp } from '@/lib/AppContext';
 import { callEdgeFunction } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
-import { Send, Plus, Bot, User, Loader2 } from 'lucide-react';
+import { Send, Plus, Bot, User, Loader2, FolderOpen } from 'lucide-react';
 import { EmptyState } from '@/components/ui';
 import type { AIConversation, AIMessage } from '@/types';
 
@@ -21,15 +21,19 @@ export function AssistantScreen() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingConvs, setLoadingConvs] = useState(true);
+  const [projects, setProjects] = useState<{ id: string; title: string }[]>([]);
+  const [projectId, setProjectId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function loadConversations() {
       setLoadingConvs(true);
-      const { data } = await supabase
-        .from('ai_conversations')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const [{ data }, { data: projectRows }] = await Promise.all([
+        supabase.from('ai_conversations').select('*').order('created_at', { ascending: false }),
+        supabase.from('research_projects').select('id,title').order('created_at', { ascending: false }),
+      ]);
+      setProjects(projectRows || []);
+      setProjectId((data?.[0]?.project_id as string | null) || projectRows?.[0]?.id || null);
       setConversations(data || []);
       if (data && data.length > 0) {
         setActiveConvId(data[0].id);
@@ -37,7 +41,7 @@ export function AssistantScreen() {
       setLoadingConvs(false);
     }
     loadConversations();
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     async function loadMessages() {
@@ -72,6 +76,7 @@ export function AssistantScreen() {
       const data = await callEdgeFunction<{ response: string; conversationId: string }>('ai-assistant', {
         message: userMessage,
         conversationId: activeConvId,
+        projectId,
       });
       setMessages((prev) => [...prev, { role: 'assistant', content: data.response }]);
       if (data.conversationId !== activeConvId) {
@@ -108,7 +113,16 @@ export function AssistantScreen() {
       {/* Header */}
       <div className="bg-white dark:bg-neutral-900 px-5 pt-12 pb-3 border-b border-neutral-100 dark:border-neutral-800 sticky top-0 z-30">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-neutral-900 dark:text-white">{t('assistantTitle')}</h1>
+          <div>
+            <h1 className="text-xl font-bold text-neutral-900 dark:text-white">{t('assistantTitle')}</h1>
+            <label className="mt-1 flex items-center gap-1.5 text-[11px] text-neutral-500">
+              <FolderOpen className="w-3.5 h-3.5" />
+              <select value={projectId || ''} onChange={(event) => { setProjectId(event.target.value || null); handleNewConversation(); }} className="bg-transparent outline-none text-neutral-600 dark:text-neutral-400 max-w-[220px]">
+                <option value="">بدون مشروع</option>
+                {projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}
+              </select>
+            </label>
+          </div>
           <button onClick={handleNewConversation} className="w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center active:scale-95 transition-all">
             <Plus className="w-5 h-5 text-primary-700 dark:text-primary-400" />
           </button>

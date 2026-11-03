@@ -551,12 +551,6 @@ Deno.serve(async (req: Request) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-      return new Response(JSON.stringify({ error: "Message is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     // Verify project membership
     if (projectId) {
       const isMember = await verifyProjectMembership(authUserId, projectId);

@@ -29,14 +29,23 @@ function normalizeTitle(title: string): string {
     .trim();
 }
 
+function normalizeDoi(doi: string | null): string | null {
+  if (!doi) return null;
+  return doi.trim().toLowerCase()
+    .replace(/^https?:\/\/(dx\.)?doi\.org\//, "")
+    .replace(/^doi:\s*/, "")
+    .replace(/[.,;]+$/, "") || null;
+}
+
 function dedupKey(p: NormalizedPaper): string {
-  if (p.doi) return `doi:${p.doi.toLowerCase()}`;
+  const doi = normalizeDoi(p.doi);
+  if (doi) return `doi:${doi}`;
   return `title:${normalizeTitle(p.title)}`;
 }
 
 function secondaryDedupKey(p: NormalizedPaper): string {
-  const firstAuthor = (p.authors[0] || "").toLowerCase().split(" ").pop() || "";
-  return `${firstAuthor}:${p.year || 0}:${normalizeTitle(p.title).slice(0, 60)}`;
+  const firstAuthor = normalizeTitle(p.authors[0] || "").split(" ").pop() || "";
+  return `${firstAuthor}:${p.year || 0}:${normalizeTitle(p.title).slice(0, 80)}`;
 }
 
 async function fetchWithTimeout(url: string, opts: RequestInit = {}, ms = 15000): Promise<Response> {
@@ -284,8 +293,8 @@ function tokenize(text: string): string[] {
     .filter((w) => w.length > 1);
 }
 
-function computeRelevance(paper: NormalizedPaper, query: string): { score: number; level: "high" | "medium" | "low"; reason: string } {
-  const queryTokens = new Set(tokenize(query));
+function computeRelevance(paper: NormalizedPaper, queries: string[]): { score: number; level: "high" | "medium" | "low"; reason: string } {
+  const queryTokens = new Set(queries.flatMap(tokenize));
   const titleTokens = new Set(tokenize(paper.title));
   const abstractTokens = paper.abstract ? new Set(tokenize(paper.abstract)) : new Set<string>();
   const keywordTokens = new Set((paper.keywords || []).map((k) => k.toLowerCase()));
@@ -356,14 +365,14 @@ Deno.serve(async (req: Request) => {
     }
 
     const safeLimit = Number.isFinite(Number(limit)) ? Math.min(50, Math.max(1, Math.floor(Number(limit)))) : 20;
-    const safeOffset = Number.isFinite(Number(offset)) ? Math.min(10000, Math.max(0, Math.floor(Number(offset)))) : 0;
+    const safeOffset = Number.isFinite(Number(offset)) ? Math.min(500, Math.max(0, Math.floor(Number(offset)))) : 0;
     const coreApiKey = Deno.env.get("CORE_API_KEY");
     const allowedProviders = new Set(["openalex", "crossref", "semantic_scholar", "pubmed", "core"]);
     const requestedProviders = Array.isArray(providers)
       ? providers.filter((provider): provider is string => typeof provider === "string" && allowedProviders.has(provider))
       : ["openalex", "crossref", "semantic_scholar", "pubmed", ...(coreApiKey ? ["core"] : [])];
     const availableProviders = new Set(coreApiKey ? allowedProviders : ["openalex", "crossref", "semantic_scholar", "pubmed"]);
-    const maxPerProvider = Math.min(100, Math.ceil(safeLimit * 1.8));
+    const maxPerProvider = Math.min(100, safeOffset + safeLimit + 20);
 
     const providerMap: Record<string, (q: string, l: number, o: number) => Promise<NormalizedPaper[]>> = {
       openalex: searchOpenAlex,
@@ -387,7 +396,7 @@ Deno.serve(async (req: Request) => {
     for (const q of allQueries) {
       for (const p of activeProviders) {
         searchPromises.push(
-          providerMap[p](q, maxPerProvider, safeOffset).catch(() => [])
+          providerMap[p](q, maxPerProvider, 0).catch(() => [])
         );
       }
     }
@@ -471,14 +480,20 @@ Deno.serve(async (req: Request) => {
 
     // Compute relevance scores
     for (const paper of deduplicated) {
-      const rel = computeRelevance(paper, query);
+      const rel = computeRelevance(paper, allQueries);
       paper.relevanceScore = rel.score;
       paper.relevanceLevel = rel.level;
       paper.relevanceReason = rel.reason;
     }
 
     // Sort by relevance score (composite)
-    deduplicated.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
+    deduplicated.sort((a, b) => {
+      const scoreDifference = (b.relevanceScore || 0) - (a.relevanceScore || 0);
+      if (Math.abs(scoreDifference) > 0.0001) return scoreDifference;
+      const yearDifference = (b.year || 0) - (a.year || 0);
+      if (yearDifference !== 0) return yearDifference;
+      return normalizeTitle(a.title).localeCompare(normalizeTitle(b.title));
+    });
 
     const finalResults = deduplicated.slice(safeOffset, safeOffset + safeLimit);
 
@@ -488,7 +503,8 @@ Deno.serve(async (req: Request) => {
       providersQueried: activeProviders,
       providersFailed: failedProviders,
       partialFailure: failedProviders.length > 0 && failedProviders.length < activeProviders.length,
-      hasMore: deduplicated.length > safeOffset + safeLimit,
+      hasMore: deduplicated.length >= safeOffset + safeLimit + 1,
+      retrievedCount: deduplicated.length,
       offset: safeOffset,
       limit: safeLimit,
     }), {

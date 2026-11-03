@@ -29,24 +29,42 @@ export function DiscoverScreen() {
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
   const [filterOA, setFilterOA] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [nextOffset, setNextOffset] = useState(0);
+  const [sortBy, setSortBy] = useState<'relevance' | 'year' | 'citations'>('relevance');
 
-  const handleSearch = async (searchQuery?: string) => {
+  const handleSearch = async (searchQuery?: string, append = false) => {
     const q = searchQuery || query;
     if (!q.trim()) return;
     setQuery(q);
+    if (!append) setNextOffset(0);
     setLoading(true);
     setError(null);
     setSearched(true);
     try {
-      const data = await callEdgeFunction<{ results: SearchResult[]; partialFailure: boolean }>('academic-search', {
+      let expandedQueries: string[] = [];
+      if (!append) {
+        try {
+          const expansion = await callEdgeFunction<{ searchQueries?: string[] }>('query-expand', { query: q });
+          expandedQueries = expansion.searchQueries || [];
+        } catch {
+          expandedQueries = [];
+        }
+      }
+      const data = await callEdgeFunction<{ results: SearchResult[]; partialFailure: boolean; hasMore: boolean }>('academic-search', {
         query: q,
         limit: 20,
+        offset: append ? nextOffset : 0,
+        expandedQueries,
       });
-      setResults(data.results || []);
+      setResults((previous) => append ? [...previous, ...(data.results || [])] : (data.results || []));
+      setHasMore(Boolean(data.hasMore));
+      setNextOffset((append ? nextOffset : 0) + (data.results || []).length);
       setPartialFailure(data.partialFailure || false);
     } catch {
       setError(t('searchError'));
-      setResults([]);
+      if (!append) setResults([]);
+      setHasMore(false);
     } finally {
       setLoading(false);
     }
@@ -76,7 +94,11 @@ export function DiscoverScreen() {
   const isSaved = (r: SearchResult) =>
     (r.doi && savedIds.has(`doi:${r.doi}`)) || savedIds.has(`title:${r.title.toLowerCase()}`);
 
-  const filteredResults = filterOA ? results.filter((r) => r.openAccess) : results;
+  const filteredResults = [...(filterOA ? results.filter((r) => r.openAccess) : results)].sort((a, b) => {
+    if (sortBy === 'year') return (b.year || 0) - (a.year || 0);
+    if (sortBy === 'citations') return (b.citationCount || 0) - (a.citationCount || 0);
+    return 0;
+  });
 
   return (
     <div className="min-h-screen pb-24 bg-neutral-50 dark:bg-neutral-950">
@@ -108,6 +130,11 @@ export function DiscoverScreen() {
             >
               <Check className="w-3 h-3" /> {t('openAccess')}
             </button>
+            <select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} className="badge bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 border-0">
+              <option value="relevance">الصلة</option>
+              <option value="year">الأحدث</option>
+              <option value="citations">الاستشهادات</option>
+            </select>
           </div>
         )}
       </div>
@@ -163,8 +190,8 @@ export function DiscoverScreen() {
         {!loading && !error && filteredResults.length > 0 && (
           <div className="space-y-3">
             <p className="text-xs text-neutral-500">{t('searchResults')} ({filteredResults.length})</p>
-            {filteredResults.map((result, i) => (
-              <div key={i} className="card">
+            {filteredResults.map((result) => (
+              <div key={`${result.doi || result.providerIds?.[0]?.id || result.title}`} className="card">
                 <h3 className="text-sm font-bold text-neutral-900 dark:text-white line-clamp-2 mb-1.5">{result.title}</h3>
                 <div className="flex items-center gap-2 text-xs text-neutral-500 mb-2 flex-wrap">
                   {result.year && <span>{result.year}</span>}
@@ -207,6 +234,11 @@ export function DiscoverScreen() {
                 </div>
               </div>
             ))}
+            {hasMore && (
+              <button onClick={() => handleSearch(undefined, true)} disabled={loading} className="btn-secondary w-full">
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null} تحميل المزيد
+              </button>
+            )}
           </div>
         )}
       </div>

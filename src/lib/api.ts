@@ -7,15 +7,26 @@ async function callEdgeFunction<T>(name: string, body: unknown): Promise<T> {
   if (sessionError || !token) throw new Error('AUTH_REQUIRED');
 
   const url = `${supabaseUrl}/functions/v1/${name}`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      apikey: supabaseAnonKey,
-    },
-    body: JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 30000);
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        apikey: supabaseAnonKey,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw new Error('REQUEST_TIMEOUT');
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+  }
 
   if (!res.ok) {
     let errorMsg = `Request failed (${res.status})`;
@@ -28,7 +39,10 @@ async function callEdgeFunction<T>(name: string, body: unknown): Promise<T> {
     throw new Error(errorMsg);
   }
 
-  const data = await res.json();
+  const data: unknown = await res.json();
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error('INVALID_RESPONSE');
+  }
   return data as T;
 }
 
