@@ -516,6 +516,33 @@ function generateGeneralResponse(message: string, ctx: ProjectContext, history: 
   return parts.join("\n");
 }
 
+// ─── Buddy Mode (Academy companion) ──────────────────────────────────────────
+
+function generateBuddyResponse(message: string): string {
+  const lower = message.toLowerCase();
+
+  if (lower.includes("متغير مستقل") || lower.includes("متغير تابع") || lower.includes("independent") || lower.includes("dependent variable")) {
+    return "سؤال ممتاز! دعني أبسطه لك:\n\nالمتغير المستقل هو السبب — الشيء الذي تتلاعب به أو تغيره في التجربة.\nالمتغير التابع هو النتيجة — الشيء الذي تقيسه لترى هل تأثر بالتغيير.\n\nمثال: إذا درست أثر ساعات الدراسة على الدرجة الامتحانية:\n- المتغير المستقل = ساعات الدراسة (أنت من يحددها)\n- المتغير التابع = الدرجة (هي التي تتأثر وتُقاس)\n\nهل تريد مثالاً آخر من موضوع بحثك؟";
+  }
+  if (lower.includes("فرضية") || lower.includes("hypothesis")) {
+    return "الفرضية البحثية تخمين ذكي قابل للاختبار يصيغه الباحث قبل بدء الدراسة.\n\nأنواعها:\n1. المعدومة (H₀): تنفي وجود علاقة — «لا يوجد أثر»\n2. البديلة (H₁): تثبت وجود علاقة — «يوجد أثر»\n\nصياغة جيدة: «تزداد درجات الطلاب الذين يدرسون 3 ساعات يوميًا مقارنة بمن يدرسون ساعة واحدة»\nصياغة ضعيفة: «الدراسة تؤثر على الطلاب» (غامضة وغير قابلة للقياس)\n\nهل تريد أن نطبق هذا على موضوع بحثك؟";
+  }
+  if (lower.includes("منهج") || lower.includes("methodology") || lower.includes("طريقة بحث")) {
+    return "مناهج البحث العلمي الرئيسية:\n\n1. الوصفي: يصف الظاهرة كما هي دون تدخل (مثل دراسة مستوى القلق لدى الطلاب)\n2. التجريبي: يتدخل الباحث ويتحكم في المتغير المستقل لقياس أثره (مثل اختبار طريقة تدريس جديدة)\n3. التاريخي: يدرس أحداث الماضي وتحليلها\n4. الارتباطي: يدرس العلاقة بين متغيرين دون تحديد السببية\n\nاختيار المنهج يعتمد على سؤال البحث. هل تريد مساعدة في اختيار المنهج المناسب لبحثك؟";
+  }
+  if (lower.includes("عينة") || lower.includes("sample") || lower.includes("مجتمع البحث")) {
+    return "مجتمع البحث = جميع الأفراد الذين تنطبق عليهم خصائص الدراسة.\nالعينة = جزء تختاره من المجتمع للدراسة.\n\nطرق الاختيار:\n- عشوائية (الأفضل): كل فرد له فرصة متساوية\n- طبقية: تقسم المجتمع لفئات ثم تختار من كل فئة\n- قصدية: تختار عن قصد وفق معايير\n\nكلما كانت العينة أكثر تمثيلاً، كان التعميم أكثر دقة.\n\nهل تريد مساعدة في تحديد حجم العينة المناسب؟";
+  }
+  if (lower.includes("صدق") || lower.includes("ثبات") || lower.includes("validity") || lower.includes("reliability")) {
+    return "الصدق والثبات من أهم معايير جودة أدوات البحث:\n\nالصدق (Validity): هل الأداة تقيس ما صُممت لقياسه فعلاً؟\n- استبيان القلق يجب أن يقيس القلق لا الاكتئاب\n\nالثبات (Reliability): هل تعطي الأداة نتائج متسقة عند التكرار؟\n- إذا أعادت الاختبار نفس النتائج في ظروف مشابهة، فهو ثابت\n\nأداة قد تكون ثابتة لكن غير صادقة، لكن الصادقة عادة تكون ثابتة أيضاً.\n\nهل تريد معرفة كيف تتحقق من الصدق والثبات في بحثك؟";
+  }
+  if (lower.includes("توثيق") || lower.includes("مراجع") || lower.includes("citation") || lower.includes("apa")) {
+    return "التوثيق الأكاديمي ينقسم لأنظمة شائعة:\n\n1. APA — للعلوم الاجتماعية والنفسية (الأكثر شيوعاً في البحث العربي)\n2. MLA — للآداب واللغات\n3. Chicago — للتاريخ والعلوم الإنسانية\n4. Vancouver — للعلوم الطبية\n\nبنمط APA، الاستشهاد في النص: (Smith, 2023)\nفي قائمة المراجع: Smith, J. (2023). Title. Journal, 15(2), 45-60.\n\nهل تريد مساعدة في توثيق مصدر معين؟";
+  }
+
+  return `سؤالك: "${message}"\n\nأنا رفيقك البحثي في الأكاديمية. يمكنني مساعدتك في:\n- فهم المتغيرات (المستقل والتابع والضابط)\n- صياغة الفرضيات البحثية\n- اختيار المنهج المناسب لبحثك\n- تحديد العينة ومجتمع البحث\n- فهم الصدق والثبات\n- التوثيق الأكاديمي (APA, MLA...)\n- اختيار موضوع البحث وتحديد المشكلة\n\nأعد صياغة سؤالك أو اختر من المواضيع أعلاه، وسأبسطه لك بأمثلة عملية.\n\nملاحظة: هذه إجابة استرشادية. تحقق من المصادر الأصلية للتأكد.`;
+}
+
 // ─── Main Handler ───────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
@@ -532,7 +559,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { message, projectId, conversationId } = await req.json();
+    const { message, projectId, conversationId, buddyMode } = await req.json();
     if (typeof message !== "string" || message.trim().length === 0 || message.length > 10000) {
       return new Response(JSON.stringify({ error: "Message is invalid" }), {
         status: 400,
@@ -604,7 +631,10 @@ Deno.serve(async (req: Request) => {
     // Generate response based on intent
     let response = "";
 
-    switch (intent.type) {
+    if (buddyMode) {
+      response = generateBuddyResponse(message);
+    } else {
+      switch (intent.type) {
       case "terminology":
         response = generateTerminologyResponse(message);
         break;
@@ -628,6 +658,7 @@ Deno.serve(async (req: Request) => {
         break;
       default:
         response = generateGeneralResponse(message, ctx, history);
+      }
     }
 
     // Save conversation

@@ -3,6 +3,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { useApp } from '@/lib/AppContext';
 import { BookOpen, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { Spinner } from '@/components/ui';
+import { Watermark } from '@/components/Watermark';
 
 export function AuthScreen() {
   const { signIn, signUp, resetPassword } = useAuth();
@@ -204,6 +205,7 @@ export function AuthScreen() {
         <p className="text-center text-xs text-neutral-400 mt-6">
           {t('aboutText')}
         </p>
+        <Watermark className="mt-6" />
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
-import { Chrome as Home, FolderOpen, Compass, Bot, User, GraduationCap } from 'lucide-react';
+import { Chrome as Home, FolderOpen, Compass, Bot, User, GraduationCap, BookOpen } from 'lucide-react';
 import { useApp } from '@/lib/AppContext';
 
-type Tab = 'home' | 'research' | 'discover' | 'assistant' | 'classroom' | 'account';
+type Tab = 'home' | 'research' | 'discover' | 'academy' | 'assistant' | 'classroom' | 'account';
 
 interface BottomNavProps {
   active: Tab;
@@ -15,6 +15,7 @@ export function BottomNav({ active, onChange }: BottomNavProps) {
     { id: 'home', icon: Home, label: t('navHome') },
     { id: 'research', icon: FolderOpen, label: t('navResearch') },
     { id: 'discover', icon: Compass, label: t('navDiscover') },
+    { id: 'academy', icon: BookOpen, label: t('navAcademy') },
     { id: 'assistant', icon: Bot, label: t('navAssistant') },
     { id: 'classroom', icon: GraduationCap, label: t('navClassroom') },
     { id: 'account', icon: User, label: t('navAccount') },

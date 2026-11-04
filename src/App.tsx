@@ -11,6 +11,7 @@ import { CreateResearch } from '@/screens/CreateResearch';
 import { ResearchWorkspace } from '@/screens/ResearchWorkspace';
 import { DiscoverScreen } from '@/screens/DiscoverScreen';
 import { AssistantScreen } from '@/screens/AssistantScreen';
+import { AcademyScreen } from '@/screens/AcademyScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
 import { ClassroomScreen } from '@/screens/ClassroomScreen';
 import { BottomNav, type Tab } from '@/components/BottomNav';
@@ -151,6 +152,7 @@ function AppContent() {
         <ResearchList onNewResearch={handleNewResearch} onOpenProject={handleOpenProject} />
       )}
       {screen.tab === 'discover' && <DiscoverScreen />}
+      {screen.tab === 'academy' && <AcademyScreen />}
       {screen.tab === 'assistant' && <AssistantScreen />}
       {screen.tab === 'classroom' && (
         <ClassroomScreen

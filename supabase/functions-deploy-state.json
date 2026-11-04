@@ -3,11 +3,11 @@
   "functions": {
     "academic-search": {
       "hasChanged": false,
-      "hash": "01eedee6f4b903d8e354bcd97eea0346b7044cfe6d87cc604f8ac0a7d6e78075"
+      "hash": "6c94e0701e2a0943bed9d2923c19852bdd4b5478b31e0a1cbceeec903e7bb62c"
     },
     "ai-assistant": {
       "hasChanged": false,
-      "hash": "ffcb6f0a8c9d746334ee75ac0779d1b24d7b1975adf08fa44d1aeb4cb82065c0"
+      "hash": "1f440b81502be354f35e18bbcd314c9861d2065c1305302b58988907cf7c6a1b"
     },
     "brief-generate": {
       "hasChanged": false,
@@ -27,7 +27,7 @@
     },
     "paper-analysis": {
       "hasChanged": false,
-      "hash": "25c66f0a56c67a85e9d6e17c194b24c3bb59f54d4f112f5ffcdbb5c3f671a4b7"
+      "hash": "4d12058e40092e42ab9ac0c742aba096d8b92004c802a7621a4819fb5f780d7f"
     },
     "query-expand": {
       "hasChanged": false,

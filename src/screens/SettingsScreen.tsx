@@ -7,6 +7,7 @@ import {
   LogOut, Trash2, ChevronRight, BookOpen, Type, GraduationCap,
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
+import { Watermark } from '@/components/Watermark';
 import type { Language } from '@/lib/i18n';
 import type { Theme } from '@/lib/ThemeContext';
 
@@ -119,6 +120,8 @@ export function SettingsScreen() {
           </div>
         </SettingsSection>
       </div>
+
+      <Watermark className="px-5 pb-2" />
 
       {/* Language Modal */}
       <Modal open={showLanguage} onClose={() => setShowLanguage(false)} title={t('language')} size="sm">

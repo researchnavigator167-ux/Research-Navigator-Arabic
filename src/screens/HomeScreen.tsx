@@ -2,19 +2,22 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/AuthContext';
 import { useApp } from '@/lib/AppContext';
-import { Plus, Search, Bot, FolderOpen, FileText, BarChart3, BookOpen, ArrowRight, Inbox } from 'lucide-react';
+import { Plus, Search, Bot, FolderOpen, FileText, BarChart3, BookOpen, ArrowRight, Inbox, GraduationCap, Flame, Trophy } from 'lucide-react';
 import { EmptyState, SkeletonCard } from '@/components/ui';
+import { Watermark } from '@/components/Watermark';
+import { useStreak } from '@/lib/useStreak';
 import type { ResearchProject, Source } from '@/types';
 
 interface HomeScreenProps {
   onNewResearch: () => void;
   onOpenProject: (project: ResearchProject) => void;
-  onNavigate: (tab: 'discover' | 'assistant') => void;
+  onNavigate: (tab: 'discover' | 'assistant' | 'academy') => void;
 }
 
 export function HomeScreen({ onNewResearch, onOpenProject, onNavigate }: HomeScreenProps) {
   const { user } = useAuth();
   const { t, isRTL } = useApp();
+  const { streak, achievements } = useStreak();
   const [projects, setProjects] = useState<ResearchProject[]>([]);
   const [recentSources, setRecentSources] = useState<Source[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,14 +84,33 @@ export function HomeScreen({ onNewResearch, onOpenProject, onNavigate }: HomeScr
             <p className="text-sm font-semibold text-neutral-900 dark:text-white">{t('exploreSources')}</p>
           </button>
           <button
-            onClick={() => onNavigate('assistant')}
+            onClick={() => onNavigate('academy')}
             className="bg-white dark:bg-neutral-900 rounded-2xl p-4 flex flex-col items-start gap-2 active:scale-[0.98] transition-all border border-neutral-100 dark:border-neutral-800"
           >
             <div className="w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
-              <Bot className="w-5 h-5 text-primary-700 dark:text-primary-400" />
+              <BookOpen className="w-5 h-5 text-primary-700 dark:text-primary-400" />
             </div>
-            <p className="text-sm font-semibold text-neutral-900 dark:text-white">{t('askAssistant')}</p>
+            <p className="text-sm font-semibold text-neutral-900 dark:text-white">{t('navAcademy')}</p>
           </button>
+        </div>
+
+        {/* Academy Progress Summary */}
+        <div className="grid grid-cols-3 gap-2 mt-3">
+          <div className="bg-white dark:bg-neutral-900 rounded-xl p-3 text-center border border-neutral-100 dark:border-neutral-800">
+            <Flame className="w-5 h-5 text-orange-500 mx-auto mb-1" />
+            <p className="text-lg font-bold text-neutral-900 dark:text-white">{streak}</p>
+            <p className="text-[10px] text-neutral-500">{t('streakDays')}</p>
+          </div>
+          <div className="bg-white dark:bg-neutral-900 rounded-xl p-3 text-center border border-neutral-100 dark:border-neutral-800">
+            <Trophy className="w-5 h-5 text-amber-500 mx-auto mb-1" />
+            <p className="text-lg font-bold text-neutral-900 dark:text-white">{achievements.filter(a => a.unlocked).length}</p>
+            <p className="text-[10px] text-neutral-500">{t('achievementsTitle')}</p>
+          </div>
+          <div className="bg-white dark:bg-neutral-900 rounded-xl p-3 text-center border border-neutral-100 dark:border-neutral-800">
+            <GraduationCap className="w-5 h-5 text-primary-700 dark:text-primary-400 mx-auto mb-1" />
+            <p className="text-lg font-bold text-neutral-900 dark:text-white">{t('navAcademy')}</p>
+            <p className="text-[10px] text-neutral-500">{t('academyTitle')}</p>
+          </div>
         </div>
       </div>
 
@@ -170,6 +192,8 @@ export function HomeScreen({ onNewResearch, onOpenProject, onNavigate }: HomeScr
           </div>
         </div>
       )}
+
+      <Watermark className="mt-8 pb-2" />
     </div>
   );
 }
